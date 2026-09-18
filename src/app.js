@@ -79,7 +79,7 @@ const LESSONS=[
 ];
 
 /* ---------- state ---------- */
-const DEF={coins:0,xp:0,best:{},stars:{},owned:['core','cadet'],buddy:'',voice:1,sfx:1,heb:1,skin:'core',voiceName:'',voicePick:0,hero:'cadet'};
+const DEF={coins:0,xp:0,best:{},stars:{},owned:['core','cadet'],buddy:'',voice:1,sfx:1,heb:1,skin:'core',arena:'auto',voiceName:'',voicePick:0,hero:'cadet'};
 let S=Object.assign({},DEF);
 try{const raw=localStorage.getItem('keyquest');if(raw)S=Object.assign({},DEF,JSON.parse(raw));}catch(e){}
 /* migrate older saves */
@@ -112,7 +112,13 @@ cx.imageSmoothingEnabled=false;
    about the same share of the height, and the width then buys environment. */
 let CW=300,CH=112,GROUND=104,HORIZON=80;
 let HERO_HOME=50,FOE_HOME=148,DRAW_Y=GROUND-FH*SC+2;
-let STARS=[],TOWERS=[];
+let SD={};let sceneBiome=null;
+function curBiome(){return sceneBiome||BIOME(S.skin);}
+/* A mission walks to the next place rather than replaying the same one. */
+function pickBiome(){
+  if(S.arena&&S.arena!=='auto'){const b=BIOMES.find(x=>x.id===S.arena);if(b){sceneBiome=b;return;}}
+  sceneBiome=lvl>=0?BIOMES[lvl%BIOMES.length]:BIOMES[Math.floor(Math.random()*BIOMES.length)];
+}
 const PAIR_GAP=98;              /* the distance between the two fighters */
 function rnd(seed){let t=seed+0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);
   return ((t^t>>>14)>>>0)/4294967296;}
@@ -136,50 +142,214 @@ function layoutScene(){
   FOE_HOME=HERO_HOME+PAIR_GAP;
   buildSky();
 }
-function buildSky(){
-  STARS=[];
-  const n=Math.round(CW*HORIZON/2800);
-  for(let i=0;i<n;i++)STARS.push([Math.round(rnd(i*7+1)*(CW-2)),Math.round(rnd(i*13+5)*(HORIZON-6))+2]);
-  TOWERS=[];
-  const step=18,m=Math.floor(CW/step);
-  for(let i=0;i<m;i++){
-    const x=i*step+2,h=Math.round((.28+rnd(i*31+3)*.34)*HORIZON);
-    TOWERS.push([x,HORIZON-h]);
-  }
-}
 let hero={base:'soldier',x:-70,anim:'idle',t0:0,alpha:1,tint:'none'};
 let foe ={base:'orc',    x:360,anim:'idle',t0:0,alpha:1,tint:'none'};
 let lives=3,maxLives=3,running=false;
 
-const ARENA={
- core :{sky:'#060D18',star:'#6FE3DC',glow:'#35E0D0',floor:'#08131F',grid:'#17414C',tower:'#0C1B2B',win:'#35E0D0'},
- ember:{sky:'#150810',star:'#FFC58A',glow:'#FF7A45',floor:'#1A0A10',grid:'#5A2A1E',tower:'#24101A',win:'#FF9A3C'},
- void :{sky:'#0A0618',star:'#C9A6FF',glow:'#A97BFF',floor:'#120B22',grid:'#3A2660',tower:'#180F2E',win:'#C08CFF'}
-};
+/* ---------- environments ----------
+   Ten places, not one skyline recoloured. Each owns a palette, a page theme and
+   a painter that works from CW/CH/HORIZON, so every one fills whatever shape the
+   arena turns out to be. Missions walk through them in order, so getting further
+   into the game means going somewhere new. */
 function px(c,x,y,w,h){cx.fillStyle=c;cx.fillRect(x,y,w,h);}
-function drawArena(){
-  const p=ARENA[S.skin]||ARENA.core;
-  px(p.sky,0,0,CW,HORIZON);
-  p_stars(p);
-  /* skyline */
-  TOWERS.forEach(([x,y])=>{
-    px(p.tower,x,y,14,HORIZON-y);
-    for(let wy=y+4;wy<HORIZON-4;wy+=7)px(p.win,x+4,wy,2,2);
-  });
-  /* floor + perspective grid */
-  px(p.floor,0,HORIZON,CW,CH-HORIZON);
-  cx.strokeStyle=p.grid;cx.lineWidth=1;
-  cx.beginPath();
+function dots(a,c,s){a.forEach(([x,y])=>px(c,x,y,s||1,s||1));}
+function disc(x,y,r,c){cx.fillStyle=c;cx.beginPath();cx.arc(x,y,r,0,6.284);cx.fill();}
+function tri(x,y,w,h,c){cx.fillStyle=c;cx.beginPath();cx.moveTo(x,y+h);cx.lineTo(x+w/2,y);cx.lineTo(x+w,y+h);cx.closePath();cx.fill();}
+function neonGrid(c){
+  cx.strokeStyle=c;cx.lineWidth=1;cx.beginPath();
   const span=Math.ceil(CW/44),deep=CH-HORIZON;
   for(let i=-span;i<=span;i++){cx.moveTo(CW/2+i*10,HORIZON+.5);cx.lineTo(CW/2+i*74,CH);}
-  [.125,.28,.47,.72,1].forEach(f=>{
-    const y=Math.round(HORIZON+deep*f)-(f===1?1:0);
-    cx.moveTo(0,y+.5);cx.lineTo(CW,y+.5);
-  });
+  [.125,.28,.47,.72,1].forEach(f=>{const y=Math.round(HORIZON+deep*f)-(f===1?1:0);
+    cx.moveTo(0,y+.5);cx.lineTo(CW,y+.5);});
   cx.stroke();
-  px(p.glow,0,HORIZON-1,CW,1);
 }
-function p_stars(p){STARS.forEach(([x,y])=>px(p.star,x,y,1,1));}
+function bands(cols){
+  const deep=CH-HORIZON;
+  cols.forEach((c,i)=>{
+    const y0=HORIZON+Math.round(deep*(i/cols.length)),y1=HORIZON+Math.round(deep*((i+1)/cols.length));
+    px(c,0,y0,CW,y1-y0);
+  });
+}
+function drift(v,span,ts,speed){return ((v+ts*speed)%span+span)%span;}
+
+const BIOMES=[
+{id:'core',name:'Neon city',theme:'core',
+ pal:{sky:'#060D18',ink:'#6FE3DC',glow:'#35E0D0',floor:'#08131F',grid:'#17414C',solid:'#0C1B2B',lit:'#35E0D0'},
+ paint(p,D){
+   px(p.sky,0,0,CW,HORIZON);dots(D.stars,p.ink);
+   D.towers.forEach(([x,y,w])=>{px(p.solid,x,y,w,HORIZON-y);
+     for(let wy=y+4;wy<HORIZON-4;wy+=7)px(p.lit,x+4,wy,2,2);});
+   px(p.floor,0,HORIZON,CW,CH-HORIZON);neonGrid(p.grid);
+   px(p.glow,0,HORIZON-1,CW,1);
+ }},
+
+{id:'forest',name:'Moonlit wood',theme:'forest',
+ pal:{sky:'#081A15',ink:'#CDEFD6',glow:'#57D98B',floor:'#0B2018',grid:'#1E4A33',solid:'#061109',lit:'#9BE8B4'},
+ paint(p,D,ts){
+   px(p.sky,0,0,CW,HORIZON);dots(D.stars,p.ink);
+   const mx=Math.round(CW*.8),my=Math.round(HORIZON*.24),r=Math.max(4,Math.round(HORIZON*.1));
+   disc(mx,my,r,'#E6F7EA');disc(mx-r*.45,my-r*.3,r*.85,p.sky);
+   D.trees.forEach(([x,h,w,near])=>{
+     const c=near?'#0D2A1C':p.solid,top=HORIZON-h;
+     px(c,x+((w/2)|0)-1,top+((h*.6)|0),3,(h*.4)|0);
+     for(let k=0;k<3;k++){
+       const ww=Math.max(4,Math.round(w*(.44+k*.28))),yy=top+Math.round(h*.18*k);
+       px(c,x+Math.round((w-ww)/2),yy,ww,Math.max(3,Math.round(h*.3)));
+     }
+   });
+   bands([p.floor,'#0D2619','#102D1E']);
+   dots(D.tufts,p.grid,2);
+   D.flies.forEach(([x,y],i)=>px(p.lit,x,HORIZON-4-Math.round(drift(y,26,ts,.004+i%3*.001)),1,1));
+   px(p.glow,0,HORIZON-1,CW,1);
+ }},
+
+{id:'cave',name:'Crystal cave',theme:'cave',
+ pal:{sky:'#0A0A12',ink:'#7C6BB5',glow:'#8E7BFF',floor:'#141020',grid:'#2C2440',solid:'#191428',lit:'#B49BFF'},
+ paint(p,D){
+   px(p.sky,0,0,CW,HORIZON);
+   D.spikes.forEach(([x,w,h])=>{ /* stalactites */
+     cx.fillStyle=p.solid;cx.beginPath();cx.moveTo(x,0);cx.lineTo(x+w,0);cx.lineTo(x+w/2,h);cx.closePath();cx.fill();
+   });
+   D.gems.forEach(([x,y,h],i)=>{
+     const w=3+(i%3),base=y-Math.round(h*(i%2?.35:1));
+     tri(x,base-h,w,h,i%2?p.glow:p.lit);px(p.ink,x+((w/2)|0),base-Math.round(h*.4),1,Math.round(h*.4));
+   });
+   bands([p.floor,'#181327','#1E1830']);
+   D.rocks.forEach(([x,w,h],i)=>{const t=Math.round(h*2.2),c=i%2?'#241C38':p.solid;
+     cx.fillStyle=c;cx.beginPath();
+     cx.moveTo(x,HORIZON+Math.round(h*.6));cx.lineTo(x+w/2,HORIZON-t);cx.lineTo(x+w,HORIZON+Math.round(h*.6));
+     cx.closePath();cx.fill();});
+   px(p.glow,0,HORIZON-1,CW,1);
+ }},
+
+{id:'desert',name:'Sun dunes',theme:'desert',
+ pal:{sky:'#2A1830',ink:'#FFD9A8',glow:'#FF9E4A',floor:'#3A2318',grid:'#6B4224',solid:'#1E1020',lit:'#FFC163'},
+ paint(p,D){
+   px(p.sky,0,0,CW,HORIZON);
+   px('#3C1E34',0,Math.round(HORIZON*.45),CW,Math.round(HORIZON*.55));
+   const sx=Math.round(CW*.5),sy=Math.round(HORIZON*.62),r=Math.max(6,Math.round(HORIZON*.2));
+   disc(sx,sy,r,'#FFB35C');disc(sx,sy,r*.72,'#FFD98E');
+   D.dunes.forEach(([x,w,h])=>tri(x,HORIZON-h,w,h,p.solid));
+   bands([p.floor,'#43281B','#4C2E1E']);
+   D.ripples.forEach(([x,y,w])=>px(p.grid,x,y,w,1));
+   px(p.glow,0,HORIZON-1,CW,1);
+ }},
+
+{id:'snow',name:'Frost peaks',theme:'snow',
+ pal:{sky:'#101E30',ink:'#E8F4FF',glow:'#8FD2FF',floor:'#1B2E44',grid:'#37567A',solid:'#16283C',lit:'#FFFFFF'},
+ paint(p,D,ts){
+   px(p.sky,0,0,CW,HORIZON);dots(D.stars,p.ink);
+   D.peaks.forEach(([x,w,h])=>{
+     tri(x,HORIZON-h,w,h,p.solid);
+     tri(x+w*.32,HORIZON-h,w*.36,h*.34,'#CFE6FA');
+   });
+   bands([p.floor,'#20374F','#26405A']);
+   D.cracks.forEach(([x,y,w])=>px(p.grid,x,y,w,1));
+   D.flakes.forEach(([x,y],i)=>px(p.lit,(x+Math.round(Math.sin((ts/900)+i)*3))%CW,
+     Math.round(drift(y,CH,ts,.012+i%4*.003)),1,1));
+   px(p.glow,0,HORIZON-1,CW,1);
+ }},
+
+{id:'space',name:'Orbit deck',theme:'space',
+ pal:{sky:'#05060F',ink:'#CFE0FF',glow:'#5AA9FF',floor:'#0C1220',grid:'#27436B',solid:'#101A2E',lit:'#8FC0FF'},
+ paint(p,D){
+   px(p.sky,0,0,CW,HORIZON);dots(D.stars,p.ink);
+   const px0=Math.round(CW*.24),py=Math.round(HORIZON*.38),r=Math.max(6,Math.round(HORIZON*.22));
+   disc(px0,py,r,'#3B5C9E');disc(px0-r*.3,py-r*.3,r*.55,'#5C82C9');
+   cx.strokeStyle='#7FA6E8';cx.lineWidth=1;cx.beginPath();
+   cx.ellipse(px0,py,r*1.7,r*.36,-0.3,0,6.284);cx.stroke();
+   px(p.floor,0,HORIZON,CW,CH-HORIZON);
+   D.panels.forEach(([x,y,w,h])=>{px(p.solid,x,y,w,h);px(p.grid,x,y,w,1);});
+   neonGrid(p.grid);
+   px(p.glow,0,HORIZON-1,CW,1);
+ }},
+
+{id:'volcano',name:'Ashfall',theme:'volcano',
+ pal:{sky:'#1A0A0A',ink:'#FF9A6B',glow:'#FF5A2B',floor:'#1E1112',grid:'#5E2416',solid:'#120809',lit:'#FFB347'},
+ paint(p,D,ts){
+   px(p.sky,0,0,CW,HORIZON);
+   px('#2A0E0C',0,Math.round(HORIZON*.5),CW,Math.round(HORIZON*.5));
+   D.cones.forEach(([x,w,h])=>{
+     tri(x,HORIZON-h,w,h,p.solid);
+     px(p.glow,Math.round(x+w*.42),Math.round(HORIZON-h),Math.max(3,Math.round(w*.16)),3);
+   });
+   bands([p.floor,'#241416','#2A181A']);
+   D.cracks.forEach(([x,y,w])=>px(p.glow,x,y,w,1));
+   D.embers.forEach(([x,y],i)=>px(p.lit,x,HORIZON-Math.round(drift(y,HORIZON,ts,.02+i%3*.006)),1,1));
+   px(p.glow,0,HORIZON-1,CW,1);
+ }},
+
+{id:'castle',name:'Keep hall',theme:'castle',
+ pal:{sky:'#1A1622',ink:'#D9C79A',glow:'#E0B457',floor:'#241E2C',grid:'#3C3348',solid:'#2A2434',lit:'#FFD98A'},
+ paint(p,D){
+   px(p.sky,0,0,CW,HORIZON);
+   for(let y=0;y<HORIZON;y+=7)for(let x=(y/7)%2?0:-9;x<CW;x+=18)px(p.solid,x,y,17,6);
+   D.arches.forEach(([x,w])=>{
+     const h=Math.round(HORIZON*.5),y=Math.round(HORIZON*.22);
+     px('#0E0B14',x,y,w,h);disc(x+w/2,y,w/2,'#0E0B14');
+     px(p.lit,x+2,y+2,w-4,2);
+   });
+   D.banners.forEach(([x,w,h])=>{px(p.glow,x,Math.round(HORIZON*.14),w,h);
+     px('#8E6A22',x,Math.round(HORIZON*.14),w,2);});
+   bands([p.floor,'#2A2334','#312941']);
+   D.tiles.forEach(([x,y,w])=>px(p.grid,x,y,w,1));
+   px(p.glow,0,HORIZON-1,CW,1);
+ }},
+
+{id:'ember',name:'Ember city',theme:'ember',
+ pal:{sky:'#150810',ink:'#FFC58A',glow:'#FF7A45',floor:'#1A0A10',grid:'#5A2A1E',solid:'#24101A',lit:'#FF9A3C'},
+ paint(p,D){BIOMES[0].paint(p,D);}},
+
+{id:'void',name:'Void city',theme:'void',
+ pal:{sky:'#0A0618',ink:'#C9A6FF',glow:'#A97BFF',floor:'#120B22',grid:'#3A2660',solid:'#180F2E',lit:'#C08CFF'},
+ paint(p,D){BIOMES[0].paint(p,D);}}
+];
+const BIOME=id=>BIOMES.find(b=>b.id===id)||BIOMES[0];
+/* Every environment's scatter is generated from the arena's real size, so a wide
+   arena gets a full skyline rather than six towers at fixed coordinates. */
+function buildSky(){
+  const n=k=>Math.max(3,Math.round(CW*k)),sky=HORIZON;
+  const pts=(count,seed,hi)=>{const a=[];for(let i=0;i<count;i++)
+    a.push([Math.round(rnd(i*7+seed)*(CW-2)),Math.round(rnd(i*13+seed+5)*(hi-4))+2]);return a;};
+  SD={
+    stars:pts(Math.round(CW*sky/2800)+4,1,sky),
+    towers:(()=>{const a=[],step=18;for(let i=0;i<Math.floor(CW/step);i++)
+      a.push([i*step+2,sky-Math.round((.28+rnd(i*31+3)*.34)*sky),14]);return a;})(),
+    trees:(()=>{const a=[],step=22;for(let i=0;i<Math.floor(CW/step)+1;i++)
+      a.push([i*step-4,Math.round((.42+rnd(i*17+9)*.42)*sky),Math.round(14+rnd(i*23)*10),i%2===0]);return a;})(),
+    tufts:pts(n(.05),21,CH-HORIZON).map(([x,y])=>[x,HORIZON+y%Math.max(1,CH-HORIZON-2)]),
+    flies:pts(n(.02)+3,33,sky),
+    spikes:(()=>{const a=[],step=16;for(let i=0;i<Math.floor(CW/step);i++)
+      a.push([i*step,12+Math.round(rnd(i*41)*8),Math.round((.18+rnd(i*11)*.3)*sky)]);return a;})(),
+    gems:(()=>{const a=[],step=34;for(let i=0;i<Math.floor(CW/step);i++)
+      a.push([i*step+8,sky,Math.round(5+rnd(i*53)*9)]);return a;})(),
+    rocks:(()=>{const a=[],step=40;for(let i=0;i<Math.floor(CW/step);i++)
+      a.push([i*step+6,Math.round(12+rnd(i*61)*14),Math.round(4+rnd(i*67)*7)]);return a;})(),
+    dunes:(()=>{const a=[],step=46;for(let i=0;i<Math.floor(CW/step)+1;i++)
+      a.push([i*step-10,Math.round(40+rnd(i*71)*34),Math.round((.16+rnd(i*73)*.2)*sky)]);return a;})(),
+    ripples:(()=>{const a=[],d=CH-HORIZON;for(let i=0;i<Math.round(CW*.06);i++)
+      a.push([Math.round(rnd(i*79)*CW),HORIZON+2+Math.round(rnd(i*83)*(d-3)),Math.round(4+rnd(i*89)*9)]);return a;})(),
+    peaks:(()=>{const a=[],step=52;for(let i=0;i<Math.floor(CW/step)+1;i++)
+      a.push([i*step-12,Math.round(52+rnd(i*97)*30),Math.round((.3+rnd(i*101)*.28)*sky)]);return a;})(),
+    cracks:(()=>{const a=[],d=CH-HORIZON;for(let i=0;i<Math.round(CW*.05);i++)
+      a.push([Math.round(rnd(i*103)*CW),HORIZON+2+Math.round(rnd(i*107)*(d-3)),Math.round(5+rnd(i*109)*11)]);return a;})(),
+    flakes:pts(n(.06)+6,41,CH),
+    panels:(()=>{const a=[],step=26,d=CH-HORIZON;for(let i=0;i<Math.floor(CW/step);i++)
+      a.push([i*step,HORIZON+Math.round(d*.35),24,Math.max(2,Math.round(d*.18))]);return a;})(),
+    cones:(()=>{const a=[],step=58;for(let i=0;i<Math.floor(CW/step)+1;i++)
+      a.push([i*step-14,Math.round(50+rnd(i*113)*34),Math.round((.28+rnd(i*127)*.26)*sky)]);return a;})(),
+    embers:pts(n(.04)+4,51,sky),
+    arches:(()=>{const a=[],step=44;for(let i=0;i<Math.floor(CW/step);i++)a.push([i*step+10,16]);return a;})(),
+    banners:(()=>{const a=[],step=44;for(let i=0;i<Math.floor(CW/step);i++)
+      a.push([i*step+20,6,Math.round(sky*.3)]);return a;})(),
+    tiles:(()=>{const a=[],d=CH-HORIZON;for(let i=0;i<Math.round(CW*.07);i++)
+      a.push([Math.round(rnd(i*131)*CW),HORIZON+2+Math.round(rnd(i*137)*(d-3)),Math.round(6+rnd(i*139)*12)]);return a;})()
+  };
+}
+function drawArena(ts){
+  const b=curBiome(),p=b.pal;
+  b.paint(p,SD,ts||0);
+}
 const HEART=[".11.11.","1111111","1111111",".11111.","..111..","...1..."];
 function drawHearts(){
   const x0=Math.round(hero.x)+34,y0=12,s=2;
@@ -222,7 +392,7 @@ function step(actor,ts,home,dir){
 function loop(ts){
   if(!running)return;
   cx.clearRect(0,0,CW,CH);
-  drawArena();
+  drawArena(ts);
   step(foe,ts,FOE_HOME,-1);
   step(hero,ts,HERO_HOME,1);
   blit(foe,ts,true);
@@ -543,6 +713,7 @@ function start(lesson,list,isCustom,index){
   $('viewPlay').classList.remove('hidden');$('backBtn').classList.remove('hidden');
   document.body.classList.add('playing');
   $('hebBtn').classList.remove('hidden');
+  pickBiome();document.documentElement.dataset.skin=curBiome().theme;
   layoutScene();
   startLoop();newFoe();render();
 }
@@ -687,6 +858,7 @@ function toMap(){
   $('viewMap').classList.remove('hidden');$('backBtn').classList.add('hidden');
   $('hebBtn').classList.add('hidden');
   document.body.classList.remove('playing');
+  sceneBiome=null;applySkin();
   drawPicker();drawMap();drawRank();
 }
 function drawMap(){
@@ -725,7 +897,7 @@ function drawShop(){
   });
 }
 function applySkin(){
-  document.documentElement.dataset.skin=S.skin;
+  document.documentElement.dataset.skin=curBiome().theme;
   const b=$('buddy'),item=SHOP.find(s=>s.id===S.buddy);
   if(item){b.textContent=item.face;b.classList.remove('hidden');}else b.classList.add('hidden');
   document.body.classList.toggle('hide-he',!S.heb);
