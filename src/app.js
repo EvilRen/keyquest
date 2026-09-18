@@ -81,7 +81,7 @@ const LESSONS=[
 
 /* ---------- state ---------- */
 const DEF={coins:0,xp:0,best:{},stars:{},owned:['core','cadet'],buddy:'',voice:1,sfx:1,heb:1,skin:'core',arena:'auto',voiceName:'',voicePick:0,hero:'cadet',
- keys:{},ver:''};
+ keys:{},ver:'',dayN:0,streak:0,bestStreak:0,today:null,ach:{},life:{perfect:0},seenArena:{}};
 let S=Object.assign({},DEF);
 try{const raw=localStorage.getItem('keyquest');if(raw)S=Object.assign({},DEF,JSON.parse(raw));}catch(e){}
 /* migrate older saves */
@@ -718,6 +718,9 @@ function start(lesson,list,isCustom,index){
   $('viewPlay').classList.remove('hidden');$('backBtn').classList.remove('hidden');
   document.body.classList.add('playing');
   pickBiome();document.documentElement.dataset.skin=curBiome().theme;
+  const bid=curBiome().id;S.seenArena[bid]=1;
+  if(today().arenas.indexOf(bid)<0)today().arenas.push(bid);
+  if(L&&L.n==='Target practice')today().drills++;
   layoutScene();
   startLoop();newFoe();render();
 }
@@ -785,7 +788,7 @@ function noteKey(ch,good,ms){
   if(ch===undefined||ch===null)return;
   const k=ch.toLowerCase();
   const r=S.keys[k]||(S.keys[k]={h:0,m:0,t:0,n:0});
-  if(good){r.h++;if(ms>0&&ms<15000){r.t+=ms;r.n++;}}else r.m++;
+  if(good){r.h++;today().hits++;if(ms>0&&ms<15000){r.t+=ms;r.n++;}}else r.m++;
 }
 function mastery(k){
   const r=S.keys[k];if(!r)return null;
@@ -853,7 +856,7 @@ function handle(ch,real){
 }
 function coin(n){
   const g=n*mult;
-  S.coins+=g;S.xp+=g;earned+=g;$('coinN').textContent=S.coins;save();
+  S.coins+=g;S.xp+=g;earned+=g;today().coins+=g;$('coinN').textContent=S.coins;save();
   const b=document.createElement('div');b.className='burst';b.textContent='+'+g;
   b.style.left=(window.innerWidth/2-10)+'px';b.style.top='42%';
   document.body.appendChild(b);setTimeout(()=>b.remove(),700);
@@ -868,9 +871,12 @@ function finish(){
   $('bar').style.width='100%';
   foe.alpha=0;hero.x=HERO_HOME;setAnim(hero,'idle');
   const st=misses===0?3:(misses===1?2:1);
+  today().missions++;
+  if(misses===0){today().perfect++;S.life.perfect=(S.life.perfect||0)+1;}
   $('word').innerHTML='';
   $('hint').textContent='Mission clear — '+'★'.repeat(st)+' · '+earned+' coins';
   clearKeys();speak(misses===0?'Perfect! Three stars!':'Mission clear. Well done!');
+  checkProgress();
   if(!custom&&lvl>=0){
     S.best[lvl]=Math.max(S.best[lvl]||0,earned);
     S.stars[lvl]=Math.max(S.stars[lvl]||0,st);
@@ -971,6 +977,85 @@ function drawArenaSel(){
   });
   sel.value=BIOMES.some(b=>b.id===S.arena)?S.arena:'auto';
 }
+/* ---------- day, dailies, achievements ----------
+   Local and additive: delete this block and the game still plays. Every
+   achievement is a pure function of the lifetime counters, so it can be
+   re-evaluated at any time and can never double-award. */
+/* Local midnight, not UTC: a child playing at 21:00 and again at 08:00 has
+   played on two days, whatever the timezone offset says. */
+function dayNum(){
+  const d=new Date();
+  return Math.floor(new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime()/86400000);
+}
+function touchStreak(){
+  const n=dayNum();
+  if(S.dayN===n)return;
+  S.streak=(S.dayN===n-1)?(S.streak||0)+1:1;
+  S.dayN=n;
+  if(S.streak>(S.bestStreak||0))S.bestStreak=S.streak;
+  save();
+}
+function today(){
+  const n=dayNum();
+  if(!S.today||S.today.n!==n)S.today={n:n,missions:0,hits:0,perfect:0,drills:0,coins:0,arenas:[],done:{}};
+  return S.today;
+}
+const DAILIES=[
+ {id:'m2',   t:'Clear two missions',            goal:2,  coins:40,get:t=>t.missions},
+ {id:'k120', t:'Hit 120 keys',                  goal:120,coins:40,get:t=>t.hits},
+ {id:'perf', t:'Finish a mission with no misses',goal:1,  coins:60,get:t=>t.perfect},
+ {id:'drill',t:'Run a target-practice drill',   goal:1,  coins:40,get:t=>t.drills},
+ {id:'c60',  t:'Earn 60 coins',                 goal:60, coins:30,get:t=>t.coins},
+ {id:'ar3',  t:'Fight in three arenas',         goal:3,  coins:50,get:t=>t.arenas.length}
+];
+/* Chosen by the date, so they are the same all day and roll over at midnight. */
+function todayMissions(){
+  const pool=DAILIES.slice(),pick=[];let h=(dayNum()*2654435761)>>>0;
+  for(let i=0;i<3&&pool.length;i++){h=(h*1103515245+12345)>>>0;pick.push(pool.splice(h%pool.length,1)[0]);}
+  return pick;
+}
+function summary(){
+  let hits=0,miss=0,t=0,n=0,mastered=0;
+  DRILLABLE().forEach(c=>{
+    const r=S.keys[c];if(!r)return;
+    hits+=r.h;miss+=r.m;t+=r.t;n+=r.n;
+    const q=mastery(c);if(q!==null&&q>=.8)mastered++;
+  });
+  return {hits,miss,mastered,
+    acc:hits+miss?Math.round(hits/(hits+miss)*100):0,
+    avg:n?t/n:0,
+    cleared:LESSONS.filter((_,i)=>S.stars[i]).length,
+    stars:LESSONS.reduce((a,_,i)=>a+(S.stars[i]||0),0)};
+}
+const ACH=[
+ {id:'first', t:'First mission cleared',      ok:d=>d.cleared>=1},
+ {id:'perf',  t:'A mission with no misses',   ok:d=>(S.life.perfect||0)>=1},
+ {id:'home',  t:'Home row mastered',          ok:d=>[...'asdfjkl'].every(c=>(mastery(c)||0)>=.8)},
+ {id:'k1000', t:'1,000 keys hit',             ok:d=>d.hits>=1000},
+ {id:'m20',   t:'20 keys mastered',           ok:d=>d.mastered>=20},
+ {id:'acc95', t:'95% accuracy over 300 keys', ok:d=>d.hits>=300&&d.acc>=95},
+ {id:'allm',  t:'Every mission cleared',      ok:d=>d.cleared>=LESSONS.length},
+ {id:'stars', t:'Every star collected',       ok:d=>d.stars>=LESSONS.length*3},
+ {id:'s3',    t:'Three days in a row',        ok:d=>(S.bestStreak||0)>=3},
+ {id:'s7',    t:'Seven days in a row',        ok:d=>(S.bestStreak||0)>=7},
+ {id:'tour',  t:'Fought in every arena',      ok:d=>Object.keys(S.seenArena||{}).length>=BIOMES.length}
+];
+function checkProgress(){
+  const t=today(),d=summary();
+  todayMissions().forEach(m=>{
+    if(t.done[m.id])return;
+    if(m.get(t)>=m.goal){
+      t.done[m.id]=1;S.coins+=m.coins;$('coinN').textContent=S.coins;
+      toast('DAILY DONE — '+m.t+'  +'+m.coins,6000);
+    }
+  });
+  ACH.forEach(a=>{
+    if(S.ach[a.id])return;
+    if(a.ok(d)){S.ach[a.id]=1;toast('ACHIEVEMENT — '+a.t,6000);}
+  });
+  save();
+}
+
 /* ---------- progress ---------- */
 function toast(msg,ms){
   const t=document.createElement('div');t.className='toast';t.textContent=msg;
@@ -979,21 +1064,26 @@ function toast(msg,ms){
 function fig(v,label){return '<div class="fig"><b>'+v+'</b><small>'+label+'</small></div>';}
 function heatClass(m){return m===null?'':(m<.4?'m1':m<.6?'m2':m<.8?'m3':'m4');}
 function drawStats(){
-  let h=0,m=0,t=0,n=0,mastered=0,tried=0;
-  DRILLABLE().forEach(c=>{
-    const r=S.keys[c];if(!r)return;
-    h+=r.h;m+=r.m;t+=r.t;n+=r.n;
-    const q=mastery(c);
-    if(q!==null){tried++;if(q>=.8)mastered++;}
-  });
-  const acc=h+m?Math.round(h/(h+m)*100):0;
-  const avg=n?(t/n/1000).toFixed(2)+'s':'—';
-  const cleared=LESSONS.filter((_,i)=>S.stars[i]).length;
-  const stars=LESSONS.reduce((a,_,i)=>a+(S.stars[i]||0),0);
+  /* One place computes the figures; the sheet and the achievements both read it. */
+  const d=summary();
   $('statFigs').innerHTML=
-    fig(h.toLocaleString(),'keys hit')+fig(acc+'%','accuracy')+fig(avg,'average to find a key')+
-    fig(mastered+'/'+DRILLABLE().length,'keys mastered')+
-    fig(cleared+'/'+LESSONS.length,'missions cleared')+fig(stars+'/'+LESSONS.length*3,'stars');
+    fig(d.hits.toLocaleString(),'keys hit')+fig(d.acc+'%','accuracy')+
+    fig(d.avg?(d.avg/1000).toFixed(2)+'s':'—','average to find a key')+
+    fig(d.mastered+'/'+DRILLABLE().length,'keys mastered')+
+    fig(d.cleared+'/'+LESSONS.length,'missions cleared')+
+    fig(d.stars+'/'+LESSONS.length*3,'stars');
+  const t=today();
+  $('statDay').innerHTML=
+    '<div class="streak"><b>'+(S.streak||0)+'</b> day'+((S.streak||0)===1?'':'s')+' in a row'+
+    ((S.bestStreak||0)>(S.streak||0)?' <small>best '+S.bestStreak+'</small>':'')+'</div>'+
+    todayMissions().map(m=>{
+      const at=Math.min(m.get(t),m.goal),done=!!t.done[m.id];
+      return '<div class="daily'+(done?' done':'')+'"><span>'+m.t+'</span>'+
+        '<i><b style="width:'+Math.round(at/m.goal*100)+'%"></b></i>'+
+        '<small>'+(done?'done · +'+m.coins:at+'/'+m.goal)+'</small></div>';
+    }).join('');
+  $('statAch').innerHTML=ACH.map(a=>
+    '<div class="ach'+(S.ach[a.id]?' got':'')+'">'+(S.ach[a.id]?'★':'☆')+' '+a.t+'</div>').join('');
   const g=$('heat');g.innerHTML='';
   ROWS.forEach(r=>{
     const row=document.createElement('div');row.className='heatrow';
@@ -1017,7 +1107,10 @@ function drawWeak(){
   $('weakList').textContent=w.length?w.join(' '):'play a mission first';
   $('weakGo').disabled=w.length<2;
 }
-function openStats(){drawStats();$('statSheet').classList.remove('hidden');}
+/* Re-evaluated on open, not only at mission end: the achievements are pure
+   functions of the counters, so asking again is free and never double-awards,
+   and the sheet can never show a state the player has already passed. */
+function openStats(){checkProgress();drawStats();$('statSheet').classList.remove('hidden');}
 function closeStats(){$('statSheet').classList.add('hidden');}
 $('statBtn').onclick=openStats;
 $('statClose').onclick=closeStats;
@@ -1061,6 +1154,7 @@ applySkin();drawPicker();drawMap();drawRank();drawWeak();loadClips();
 /* The version is on screen and a change announces itself: during a screenshot
    loop the two questions that cost the most are "which version is that?" and
    "is the deploy stuck, or is it my cache?" */
+touchStreak();checkProgress();
 $('verTag').textContent='v'+APP_VERSION;
 if(S.ver&&S.ver!==APP_VERSION)toast('Updated to v'+APP_VERSION);
 if(S.ver!==APP_VERSION){S.ver=APP_VERSION;save();}

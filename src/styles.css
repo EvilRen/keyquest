@@ -199,6 +199,20 @@ body.playing .row{margin-top:0;justify-content:center}
 .fig{background:var(--panel2);border:1px solid var(--edge);padding:9px 10px}
 .fig b{display:block;font-size:19px;line-height:1.2}
 .fig small{display:block;font-size:10.5px;color:var(--ink-soft);margin-top:2px}
+.streak{background:var(--panel2);border:1px solid var(--edge);border-left:3px solid var(--acc2);
+  padding:8px 10px;margin-bottom:8px;font-size:13px}
+.streak b{font-size:18px;color:var(--acc2)}
+.streak small{color:var(--ink-soft);font-size:11px}
+.daily{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:7px 0;border-bottom:1px solid var(--edge)}
+.daily span{font-size:13px;font-weight:700}
+.daily small{font-size:11px;color:var(--ink-soft);align-self:center;white-space:nowrap}
+.daily i{grid-column:1/-1;display:block;height:4px;background:var(--panel2);overflow:hidden}
+.daily i b{display:block;height:100%;background:var(--acc);width:0}
+.daily.done span{color:var(--acc)}
+.daily.done i b{background:var(--acc2)}
+.achs{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:5px}
+.ach{font-size:12px;color:var(--ink-soft);background:var(--panel2);border:1px solid var(--edge);padding:6px 8px}
+.ach.got{color:var(--acc2);border-color:var(--acc2)}
 .heat{display:flex;flex-direction:column;gap:3px}
 .heatrow{display:flex;gap:3px;justify-content:center}
 .hk{flex:1 1 0;min-width:0;height:24px;display:flex;align-items:center;justify-content:center;
