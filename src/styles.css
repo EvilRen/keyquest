@@ -142,10 +142,14 @@ input[type=text]:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
 .burst{position:fixed;pointer-events:none;font-weight:900;color:var(--acc2);font-size:19px;z-index:9;animation:rise .7s ease-out forwards}
 @keyframes rise{to{transform:translateY(-52px);opacity:0}}
 
-.vpack{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:6px}
+.vpack{display:grid;grid-template-columns:repeat(auto-fill,minmax(66px,1fr));gap:6px}
 .vtile{position:relative;background:var(--panel);border:1px solid var(--edge);padding:10px 4px 6px;
-  cursor:pointer;color:inherit;font-family:inherit;text-align:center}
-.vtile b{display:block;font-size:17px;font-weight:700;line-height:1.1}
+  cursor:pointer;color:inherit;font-family:inherit;text-align:center;min-width:0;overflow:hidden}
+.vtile b{display:block;font-size:17px;font-weight:700;line-height:1.1;
+  min-width:0;overflow-wrap:anywhere;hyphens:auto}
+/* "backspace" at the single-character size is wider than its tile and spilled
+   out of the grid. Word labels get their own size and are allowed to wrap. */
+.vtile b.word{font-size:9.5px;letter-spacing:-.01em;padding:4px 0 3px;white-space:nowrap}
 .vtile small{display:block;font-size:9.5px;color:var(--ink-soft);margin-top:2px}
 .vtile.has{border-color:var(--acc)}
 .vtile.has small{color:var(--acc)}
