@@ -79,7 +79,7 @@ const LESSONS=[
 ];
 
 /* ---------- state ---------- */
-const DEF={coins:0,xp:0,best:{},stars:{},owned:['core','cadet'],buddy:'',voice:1,sfx:1,heb:1,skin:'core',voiceName:'',hero:'cadet'};
+const DEF={coins:0,xp:0,best:{},stars:{},owned:['core','cadet'],buddy:'',voice:1,sfx:1,heb:1,skin:'core',voiceName:'',voicePick:0,hero:'cadet'};
 let S=Object.assign({},DEF);
 try{const raw=localStorage.getItem('keyquest');if(raw)S=Object.assign({},DEF,JSON.parse(raw));}catch(e){}
 /* migrate older saves */
@@ -237,6 +237,10 @@ function drawRank(){
 }
 
 /* ---------- voice ---------- */
+/* The natural voices are worth hunting for: the legacy ones read a single
+   letter flat and run two phrases together. */
+const GOOD_VOICE=/natural|online|google|samantha|aria|jenny|guy|eric|emma|ava|siri/i;
+const POOR_VOICE=/zira|david|mark|hazel|george|susan|linda|richard|sam\b/i;
 let voices=[];
 function loadVoices(){
   if(!window.speechSynthesis)return;
@@ -244,25 +248,49 @@ function loadVoices(){
   const sel=$('voiceSel');sel.innerHTML='';
   if(!voices.length){sel.classList.add('hidden');return;}
   sel.classList.remove('hidden');
+  voices.sort((a,b)=>(GOOD_VOICE.test(b.name)?1:0)-(GOOD_VOICE.test(a.name)?1:0));
   voices.forEach(v=>{
     const o=document.createElement('option');o.value=v.name;
-    o.textContent=v.name.replace(/(Microsoft|Google|Apple)\s*/,'').slice(0,22);
+    o.textContent=(GOOD_VOICE.test(v.name)?'★ ':'')+
+      v.name.replace(/(Microsoft|Google|Apple)\s*/,'').replace(/\s*Online\s*\(Natural\)/i,'').slice(0,22);
     sel.appendChild(o);
   });
-  const prefer=S.voiceName||(voices.find(v=>/natural|google|samantha|aria|jenny/i.test(v.name))||voices[0]).name;
+  /* A voice saved before this list existed wins forever otherwise: the old code
+     only consulted the preference when nothing was stored, so a first visit that
+     landed on a robotic legacy voice kept it for good. Re-pick unless the choice
+     was made by hand. */
+  const best=voices.find(v=>GOOD_VOICE.test(v.name));
+  const saved=voices.find(v=>v.name===S.voiceName);
+  const keep=saved&&(S.voicePick||!POOR_VOICE.test(saved.name)||!best);
+  const prefer=keep?saved.name:(best||voices[0]).name;
   sel.value=prefer;S.voiceName=sel.value;save();
 }
 if(window.speechSynthesis){speechSynthesis.onvoiceschanged=loadVoices;setTimeout(loadVoices,80);}
-function speak(t){
+function utter(t,rate){
+  const u=new SpeechSynthesisUtterance(t);
+  u.rate=rate||.8;u.pitch=1.05;u.lang='en-US';
+  const v=voices.find(x=>x.name===S.voiceName);if(v)u.voice=v;
+  return u;
+}
+/* Phrases are spoken one at a time with a gap between them. Putting them in a
+   single utterance ran them together — "F. F for fish." came out as "ff". */
+function speakParts(parts,gap){
   if(!S.voice||!window.speechSynthesis)return;
   try{
     speechSynthesis.cancel();
-    const u=new SpeechSynthesisUtterance(t);
-    u.rate=.75;u.pitch=1.05;u.lang='en-US';
-    const v=voices.find(x=>x.name===S.voiceName);if(v)u.voice=v;
-    speechSynthesis.speak(u);
+    let i=0;
+    const next=()=>{
+      if(i>=parts.length)return;
+      const p=parts[i++];
+      const u=utter(p.t,p.rate);
+      u.onend=()=>setTimeout(next,p.gap||gap||240);
+      u.onerror=()=>setTimeout(next,60);
+      speechSynthesis.speak(u);
+    };
+    next();
   }catch(e){}
 }
+function speak(t){speakParts([{t:t}]);}
 const LW={a:'apple',b:'ball',c:'cat',d:'dog',e:'egg',f:'fish',g:'goat',h:'hat',i:'igloo',j:'jam',
 k:'kite',l:'lion',m:'moon',n:'nest',o:'orange',p:'pen',q:'queen',r:'rain',s:'sun',t:'tree',
 u:'umbrella',v:'van',w:'water',x:'box',y:'yoyo',z:'zebra'};
@@ -270,7 +298,9 @@ function sayTarget(w){
   if(w.length===1){
     const c=w.toLowerCase();
     if(playClip(c))return;
-    if(/[a-z]/.test(c))speak(c.toUpperCase()+'. '+c.toUpperCase()+' for '+LW[c]+'.');
+    if(/[a-z]/.test(c))speakParts([
+      {t:c.toUpperCase()+'.',rate:.65,gap:420},
+      {t:c.toUpperCase()+' for '+LW[c]+'.',rate:.8}]);
     else if(/[0-9]/.test(c))speak('number '+c);
     else speak(NAMES[c]||c);
   }else{
@@ -659,7 +689,7 @@ function applySkin(){
 $('soundBtn').onclick=()=>{S.voice=S.voice?0:1;save();applySkin();};
 $('sfxBtn').onclick=()=>{S.sfx=S.sfx?0:1;save();applySkin();if(S.sfx)sfx('swing');};
 $('hebBtn').onclick=()=>{S.heb=S.heb?0:1;save();applySkin();};
-$('voiceSel').onchange=e=>{S.voiceName=e.target.value;save();speak('Hello, ready to play?');};
+$('voiceSel').onchange=e=>{S.voiceName=e.target.value;S.voicePick=1;save();speak('Hello, ready to play?');};
 $('backBtn').onclick=toMap;
 $('coinBtn').onclick=()=>{
   if($('viewShop').classList.contains('hidden')){

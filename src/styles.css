@@ -32,7 +32,13 @@ body{
 .pill:hover{border-color:var(--acc)}
 .pill:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 .coins{border-color:var(--acc2);color:var(--acc2)}
-.coin-dot{width:9px;height:9px;background:var(--acc2);display:inline-block;transform:rotate(45deg)}
+.coin{width:17px;height:17px;display:block;flex:0 0 auto;
+  filter:drop-shadow(0 1px 1px rgba(0,0,0,.45))}
+/* The pill is the way into the store, so it says so rather than relying on the
+   coin count being recognised as a button. */
+.shoptag{margin-left:2px;padding-left:8px;border-left:1px solid rgba(255,180,58,.4);
+  font-size:12px;letter-spacing:.06em;text-transform:uppercase;opacity:.95}
+.coins:hover .shoptag,.coins:focus-visible .shoptag{opacity:1}
 select.pill{padding-right:8px;max-width:180px}
 
 .rankbar{background:var(--panel);border:1px solid var(--edge);border-left:3px solid var(--acc);
