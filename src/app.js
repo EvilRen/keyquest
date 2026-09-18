@@ -1,4 +1,4 @@
-const APP_VERSION='1.4.0';
+const APP_VERSION='1.5.0';
 function $(id){return document.getElementById(id);}
 
 /* ---------- atlas ---------- */
@@ -592,30 +592,82 @@ async function recordInto(tok,tile){
   recorder.start();
   setTimeout(()=>{if(recorder&&recorder.state==='recording')recorder.stop();},1600);
 }
+/* ---------- the voice pack ----------
+   Groups are derived from VTOKENS, not listed by hand: adding a symbol to a
+   lesson puts a tile in the right tab without anyone remembering to. Only the
+   open tab renders, so the sheet stays the same size whether there are forty
+   tokens or four hundred. */
+const VGROUPS=[
+ {id:'letters',t:'Letters',has:k=>/^[a-z]$/.test(k)},
+ {id:'numbers',t:'Numbers',has:k=>/^[0-9]$/.test(k)},
+ {id:'symbols',t:'Symbols',has:k=>k.length===1&&!/[a-z0-9]/.test(k)},
+ {id:'keys',   t:'Keys',   has:k=>k.length>1}
+];
+let vTab='letters',vFilter='',vOnlyNew=false;
+function vGroupOf(tok){const g=VGROUPS.find(x=>x.has(tok));return g?g.id:'keys';}
+function vTokensFor(id){return VTOKENS.filter(t=>vGroupOf(t)===id);}
+function vMatches(tok){
+  if(vOnlyNew&&clips.has(tok))return false;
+  if(!vFilter)return true;
+  const f=vFilter.toLowerCase();
+  return tok.toLowerCase().includes(f)||(NAMES[tok]||'').toLowerCase().includes(f);
+}
+function vpRecorded(){return VTOKENS.filter(t=>clips.has(t)).length;}
+function drawVoiceTabs(){
+  const bar=$('vpTabs');if(!bar)return;
+  bar.innerHTML='';
+  VGROUPS.forEach(g=>{
+    const all=vTokensFor(g.id);
+    if(!all.length)return;
+    const done=all.filter(t=>clips.has(t)).length;
+    const b=document.createElement('button');
+    b.className='tab'+(vTab===g.id?' on':'');
+    b.innerHTML=g.t+'<small>'+done+' of '+all.length+'</small>';
+    b.onclick=()=>{vTab=g.id;drawVoiceTabs();drawVoicePack();};
+    bar.appendChild(b);
+  });
+  const c=$('vpCount');
+  if(c)c.textContent=vpRecorded()+' of '+VTOKENS.length+' recorded in your voice';
+}
 function drawVoicePack(){
   const g=$('vpack');if(!g)return;
   g.innerHTML='';
-  VTOKENS.forEach(tok=>{
+  const list=vTokensFor(vTab).filter(vMatches);
+  if(!list.length){
+    const e=document.createElement('p');e.className='vpempty';
+    e.textContent=vOnlyNew?'Every key in this group is recorded.':'Nothing here matches that.';
+    g.appendChild(e);
+  }
+  list.forEach(tok=>{
     const has=clips.has(tok);
     const t=document.createElement('div');
     t.className='vtile'+(has?' has':'');
     t.innerHTML='<b'+(tok.length>1?' class="word"':'')+'>'+vlabel(tok)+'</b>'+
       '<small>'+(has?'yours':'record')+'</small>';
+    t.title=NAMES[tok]||vlabel(tok);
     t.addEventListener('click',()=>{ if(has)playClip(tok); else recordInto(tok,t); });
     if(has){
       const re=document.createElement('button');
       re.className='re';re.textContent='redo';re.title='Record again';
       re.addEventListener('click',ev=>{ev.stopPropagation();dropClip(tok).then(()=>{
-        const tile=[...g.children].find(c=>c.querySelector('b').textContent===vlabel(tok));
+        const tile=[...g.children].find(c=>c.querySelector('b')&&c.querySelector('b').textContent===vlabel(tok));
         if(tile)recordInto(tok,tile);
       });});
       t.appendChild(re);
     }
     g.appendChild(t);
   });
+  drawVoiceTabs();
   if(!navigator.mediaDevices||!window.MediaRecorder)
     $('micNote').textContent='This browser cannot record audio, so the computer voice is used.';
 }
+/* One sheet at a time. Opening the voice pack from Settings used to leave
+   Settings open on top of it, where it swallowed every click. Closing the
+   voice pack returns to where it was opened from. */
+const SHEETS=['vpSheet','setSheet','statSheet'];
+function closeSheets(){SHEETS.forEach(id=>$(id).classList.add('hidden'));}
+function openVoice(){closeSheets();$('vpSheet').classList.remove('hidden');drawVoiceTabs();drawVoicePack();}
+function closeVoice(){$('vpSheet').classList.add('hidden');openSet();}
 /* ---------- sound effects ----------
    All synthesised: two layers per sound, a pitched sweep for the body and a
    band-passed noise burst for the grit. One shared AudioContext — making a new
@@ -1110,7 +1162,7 @@ function drawWeak(){
 /* Re-evaluated on open, not only at mission end: the achievements are pure
    functions of the counters, so asking again is free and never double-awards,
    and the sheet can never show a state the player has already passed. */
-function openStats(){checkProgress();drawStats();$('statSheet').classList.remove('hidden');}
+function openStats(){closeSheets();checkProgress();drawStats();$('statSheet').classList.remove('hidden');}
 function closeStats(){$('statSheet').classList.add('hidden');}
 $('statBtn').onclick=openStats;
 $('statClose').onclick=closeStats;
@@ -1120,8 +1172,13 @@ $('weakGo').onclick=()=>{
   if(!it){toast('Play a mission first, then this fills up.');return;}
   start({n:'Target practice',s:'your weak keys'},it,true);
 };
-function openSet(){drawArenaSel();applySkin();$('setSheet').classList.remove('hidden');}
+function openSet(){closeSheets();drawArenaSel();drawVoiceTabs();applySkin();$('setSheet').classList.remove('hidden');}
 function closeSet(){$('setSheet').classList.add('hidden');}
+$('vpOpen').onclick=openVoice;
+$('vpClose').onclick=closeVoice;
+$('vpSheet').addEventListener('click',e=>{if(e.target===$('vpSheet'))closeVoice();});
+$('vpFilter').addEventListener('input',e=>{vFilter=e.target.value.trim();drawVoicePack();});
+$('vpOnlyNew').onclick=()=>{vOnlyNew=!vOnlyNew;$('vpOnlyNew').classList.toggle('on',vOnlyNew);drawVoicePack();};
 $('setBtn').onclick=openSet;
 $('setClose').onclick=closeSet;
 $('setSheet').addEventListener('click',e=>{if(e.target===$('setSheet'))closeSet();});
@@ -1130,6 +1187,7 @@ $('arenaSel').onchange=e=>{
   if(!$('viewPlay').classList.contains('hidden')){pickBiome();document.documentElement.dataset.skin=curBiome().theme;layoutScene();}
 };
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
+  if(!$('vpSheet').classList.contains('hidden'))return closeVoice();
   if(!$('setSheet').classList.contains('hidden'))closeSet();
   if(!$('statSheet').classList.contains('hidden'))closeStats();});
 $('voiceSel').onchange=e=>{S.voiceName=e.target.value;S.voicePick=1;save();speak('Hello, ready to play?');};

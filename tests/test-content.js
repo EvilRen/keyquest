@@ -11,7 +11,7 @@ const {install}=require('./dom-stub.js');
 
 const SRC=path.join(__dirname,'..','src','app.js');
 const code=fs.readFileSync(SRC,'utf8')+
-  '\n;globalThis.__T={LESSONS,keyEls,NAMES,VTOKENS,SHOP,BIOMES,DAILIES,ACH,FIGHTERS,BESTIARY,BASE,DEF,LW,RANKS,SHIFTED,ROWS,HE,Z};';
+  '\n;globalThis.__T={LESSONS,keyEls,NAMES,VTOKENS,SHOP,BIOMES,DAILIES,ACH,VGROUPS,vGroupOf,FIGHTERS,BESTIARY,BASE,DEF,LW,RANKS,SHIFTED,ROWS,HE,Z};';
 
 const sandbox=install();
 vm.createContext(sandbox);
@@ -58,6 +58,16 @@ ok('every lesson symbol has a voice-pack tile',notile.length===0,
 
 ok('every letter a-z has a word for the fallback voice',
    [...'abcdefghijklmnopqrstuvwxyz'].every(c=>T.LW[c]));
+
+/* The voice pack renders one tab at a time, so a token no group claims is a
+   tile that exists in VTOKENS and can never be reached to record. */
+ok('every voice token lands in exactly one group',(()=>{
+  return T.VTOKENS.every(tok=>T.VGROUPS.filter(g=>g.has(tok)).length===1);
+})(),'miscounted: '+JSON.stringify(T.VTOKENS.filter(t=>T.VGROUPS.filter(g=>g.has(t)).length!==1)));
+ok('every voice group has a name and holds something',
+   T.VGROUPS.every(g=>g.id&&g.t&&typeof g.has==='function'));
+ok('the groups together cover the whole voice pack',
+   T.VTOKENS.every(t=>T.VGROUPS.some(g=>g.id===T.vGroupOf(t))));
 
 console.log('sprites and shop');
 ok('every fighter points at a sprite row that exists',

@@ -15,8 +15,10 @@ Built with my seven-year-old, whose idea this was.
 - **6 playable fighters** with different hearts and coin rates, unlocked with coins
 - **10 named enemies** that appear as the missions get harder
 - **Stars and ranks** — three stars for a flawless mission, XP toward nine ranks
-- **Voice pack** — record your own voice for each letter; falls back to the
-  browser's speech synthesis, which says "D. D for dog." for clarity
+- **Voice pack** — record your own voice for each key, in Settings → Your own
+  voice. Grouped into Letters / Numbers / Symbols / Keys with a filter and a
+  "not recorded" toggle, so it stays usable however many keys there are. Falls
+  back to speech synthesis, which says the letter, pauses, then "D for dog." 
 - **Combat sound** — synthesised swing, impact and death effects, layered from
   an oscillator sweep and a band-passed noise burst. No audio files. The
   header's Sound button mutes them separately from the letter voice

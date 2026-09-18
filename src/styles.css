@@ -193,6 +193,18 @@ body.playing .progress{margin-top:8px}
 body.playing .kb,body.playing .row{flex:0 0 auto}
 body.playing .row{margin-top:0;justify-content:center}
 
+/* voice sheet */
+.sheetBox.wide-sheet{max-width:600px}
+.lede.sm{font-size:12.5px;margin-bottom:12px}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px}
+.tab{flex:1 1 0;min-width:74px;background:var(--panel2);border:1px solid var(--edge);color:var(--ink-soft);
+  font-family:inherit;font-weight:700;font-size:12px;padding:7px 6px;cursor:pointer;white-space:nowrap}
+.tab.on{background:var(--panel);border-color:var(--acc);color:var(--acc)}
+.tab small{display:block;font-weight:400;font-size:10px;opacity:.8}
+.row.tight{margin-top:0;margin-bottom:10px}
+#vpOnlyNew.on{border-color:var(--acc);color:var(--acc)}
+.vpempty{color:var(--ink-soft);font-size:12.5px;padding:14px 2px}
+
 /* progress sheet */
 .subh{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);margin:18px 0 6px}
 .figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:8px}
