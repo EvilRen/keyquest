@@ -90,7 +90,7 @@ p.lede{color:var(--ink-soft);margin:0 0 14px;font-size:13.5px;max-width:62ch;lin
 /* arena */
 .stage{background:var(--panel);border:1px solid var(--edge);padding:10px 16px 16px;text-align:center;margin-bottom:10px;
   clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px))}
-.arena{display:flex;flex-direction:column;align-items:center;margin-bottom:4px}
+.arena{display:flex;flex-direction:column;align-items:center;margin-bottom:4px;position:relative}
 #scene{image-rendering:pixelated;image-rendering:crisp-edges;width:100%;max-width:640px;height:auto;display:block;
   border:1px solid var(--edge)}
 
@@ -197,6 +197,27 @@ body.playing .row{margin-top:0;justify-content:center}
 .wn{padding:9px 0;border-bottom:1px solid var(--edge)}
 .wn b{display:block;font-size:14px;margin-bottom:2px}
 .wn small{color:var(--ink-soft);font-size:12.5px;line-height:1.5}
+
+.heroNow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--panel);
+  border:1px solid var(--edge);border-left:3px solid var(--acc);padding:10px 14px}
+.heroNow canvas{image-rendering:pixelated;width:58px;height:42px;flex:0 0 auto}
+.heroTxt{display:flex;flex-direction:column;gap:1px;margin-right:auto;min-width:0}
+.heroTxt b{font-size:15px}
+.heroTxt small{font-size:11.5px;color:var(--ink-soft)}
+.heroCount{font-size:11px;color:var(--ink-soft);flex-basis:100%}
+.bestGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:7px}
+.foe{background:var(--panel2);border:1px solid var(--edge);padding:8px 4px 6px;text-align:center}
+.foe canvas{image-rendering:pixelated;width:58px;height:42px}
+.foe b{display:block;font-size:12.5px;margin-top:2px}
+.foe small{display:block;font-size:10.5px;color:var(--ink-soft)}
+.foe.met{border-color:var(--acc)}
+.foe.met small{color:var(--acc)}
+/* Sits over the arena floor rather than above it: a row that comes and goes
+   must not push, and reserving a line for it cost the scene 18px of height on
+   a short window, where it has the least to spare. */
+.foeName{position:absolute;left:9px;bottom:5px;z-index:2;pointer-events:none;
+  font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);
+  text-shadow:0 1px 2px rgba(0,0,0,.9)}
 
 /* voice sheet */
 .sheetBox.wide-sheet{max-width:600px}
