@@ -73,7 +73,7 @@ const LESSONS=[
 ];
 
 /* ---------- state ---------- */
-const DEF={coins:0,xp:0,best:{},stars:{},owned:['core','cadet'],buddy:'',voice:1,heb:1,skin:'core',voiceName:'',hero:'cadet'};
+const DEF={coins:0,xp:0,best:{},stars:{},owned:['core','cadet'],buddy:'',voice:1,sfx:1,heb:1,skin:'core',voiceName:'',hero:'cadet'};
 let S=Object.assign({},DEF);
 try{const raw=localStorage.getItem('keyquest');if(raw)S=Object.assign({},DEF,JSON.parse(raw));}catch(e){}
 /* migrate older saves */
@@ -350,11 +350,69 @@ function drawVoicePack(){
   if(!navigator.mediaDevices||!window.MediaRecorder)
     $('micNote').textContent='This browser cannot record audio, so the computer voice is used.';
 }
+/* ---------- sound effects ----------
+   All synthesised: two layers per sound, a pitched sweep for the body and a
+   band-passed noise burst for the grit. One shared AudioContext — making a new
+   one per sound leaks them, and browsers cap how many a page may hold. */
+let AC=null,NB=null;
+function actx(){
+  if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)();}catch(e){return null;}}
+  if(AC.state==='suspended')AC.resume().catch(()=>{});
+  return AC;
+}
+function noiseBuf(a){
+  if(!NB){const n=(a.sampleRate*.7)|0;NB=a.createBuffer(1,n,a.sampleRate);
+    const d=NB.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;}
+  return NB;
+}
+/* one oscillator sweeping f0 -> f1 over dur, fading to silence */
+function tone(a,type,f0,f1,dur,vol,delay){
+  const t=a.currentTime+(delay||0),o=a.createOscillator(),g=a.createGain();
+  o.type=type;
+  o.frequency.setValueAtTime(f0,t);
+  o.frequency.exponentialRampToValueAtTime(Math.max(1,f1),t+dur);
+  g.gain.setValueAtTime(vol,t);
+  g.gain.exponentialRampToValueAtTime(.0008,t+dur);
+  o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+dur+.02);
+}
+/* a band of noise sweeping f0 -> f1: the swoosh and the crunch */
+function hiss(a,f0,f1,dur,vol,delay,q){
+  const t=a.currentTime+(delay||0),sr=a.createBufferSource(),f=a.createBiquadFilter(),g=a.createGain();
+  sr.buffer=noiseBuf(a);sr.loop=true;
+  f.type='bandpass';f.Q.value=q||1.2;
+  f.frequency.setValueAtTime(f0,t);
+  f.frequency.exponentialRampToValueAtTime(Math.max(1,f1),t+dur);
+  g.gain.setValueAtTime(vol,t);
+  g.gain.exponentialRampToValueAtTime(.0008,t+dur);
+  sr.connect(f);f.connect(g);g.connect(a.destination);sr.start(t);sr.stop(t+dur+.02);
+}
+function sfx(kind){
+  if(!S.sfx)return;
+  const a=actx();if(!a)return;
+  try{
+    if(kind==='swing'){            /* hero blade: bright whoosh, up then down */
+      hiss(a,900,2600,.10,.16,0,.9);
+      hiss(a,2600,500,.14,.12,.07,.9);
+      tone(a,'triangle',520,180,.12,.05,.02);
+    }else if(kind==='foeSwing'){   /* enemy swing: heavier and lower */
+      hiss(a,420,1100,.12,.15,0,.8);
+      hiss(a,1100,260,.16,.11,.08,.8);
+      tone(a,'sawtooth',200,80,.16,.05,.03);
+    }else if(kind==='hit'){        /* impact: body thud plus a crunch */
+      tone(a,'sine',260,60,.18,.30,0);
+      tone(a,'square',150,50,.09,.10,0);
+      hiss(a,1800,700,.09,.16,0,.7);
+    }else if(kind==='death'){      /* the long fall */
+      tone(a,'sawtooth',380,60,.60,.20,0);
+      tone(a,'sine',190,40,.70,.14,.02);
+      hiss(a,1200,200,.45,.10,.05,.6);
+    }
+  }catch(e){}
+}
 function beep(ok){
-  try{const a=new (window.AudioContext||window.webkitAudioContext)();const o=a.createOscillator(),g=a.createGain();
-  o.connect(g);g.connect(a.destination);o.frequency.value=ok?880:180;o.type=ok?'square':'sine';
-  g.gain.setValueAtTime(.07,a.currentTime);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+.16);
-  o.start();o.stop(a.currentTime+.18);}catch(e){}
+  if(!S.sfx)return;
+  const a=actx();if(!a)return;
+  try{tone(a,ok?'square':'sine',ok?880:180,ok?880:180,.16,.07,0);}catch(e){}
 }
 
 /* ---------- keyboard build ---------- */
@@ -404,16 +462,22 @@ function newFoe(){
 }
 function swing(){
   setAnim(hero,'atk');
+  sfx('swing');
   hp=Math.max(0,hp-1);
-  setTimeout(()=>{if(foe.anim!=='death')setAnim(foe,'hurt');},200);
+  setTimeout(()=>{if(foe.anim!=='death'){setAnim(foe,'hurt');sfx('hit');}},200);
 }
 function counterSwing(){
   setAnim(foe,'atk');
-  setTimeout(()=>{setAnim(hero,lives>0?'hurt':'death');},220);
+  sfx('foeSwing');
+  setTimeout(()=>{
+    const down=lives<=0;
+    setAnim(hero,down?'death':'hurt');
+    sfx(down?'death':'hit');
+  },220);
 }
 function killFoe(cb){
   busy=true;
-  setTimeout(()=>setAnim(foe,'death'),200);
+  setTimeout(()=>{setAnim(foe,'death');sfx('death');},200);
   setTimeout(()=>{busy=false;cb();},1500);
 }
 function render(){
@@ -570,10 +634,12 @@ function applySkin(){
   if(item){b.textContent=item.face;b.classList.remove('hidden');}else b.classList.add('hidden');
   document.body.classList.toggle('hide-he',!S.heb);
   $('soundBtn').textContent=S.voice?'Voice on':'Voice off';
+  $('sfxBtn').textContent=S.sfx?'Sound on':'Sound off';
   $('hebBtn').textContent=S.heb?'א Hebrew on':'א Hebrew off';
   $('coinN').textContent=S.coins;
 }
 $('soundBtn').onclick=()=>{S.voice=S.voice?0:1;save();applySkin();};
+$('sfxBtn').onclick=()=>{S.sfx=S.sfx?0:1;save();applySkin();if(S.sfx)sfx('swing');};
 $('hebBtn').onclick=()=>{S.heb=S.heb?0:1;save();applySkin();};
 $('voiceSel').onchange=e=>{S.voiceName=e.target.value;save();speak('Hello Andy, ready to play?');};
 $('backBtn').onclick=toMap;
