@@ -1,3 +1,4 @@
+const APP_VERSION='1.4.0';
 function $(id){return document.getElementById(id);}
 
 /* ---------- atlas ---------- */
@@ -79,7 +80,8 @@ const LESSONS=[
 ];
 
 /* ---------- state ---------- */
-const DEF={coins:0,xp:0,best:{},stars:{},owned:['core','cadet'],buddy:'',voice:1,sfx:1,heb:1,skin:'core',arena:'auto',voiceName:'',voicePick:0,hero:'cadet'};
+const DEF={coins:0,xp:0,best:{},stars:{},owned:['core','cadet'],buddy:'',voice:1,sfx:1,heb:1,skin:'core',arena:'auto',voiceName:'',voicePick:0,hero:'cadet',
+ keys:{},ver:''};
 let S=Object.assign({},DEF);
 try{const raw=localStorage.getItem('keyquest');if(raw)S=Object.assign({},DEF,JSON.parse(raw));}catch(e){}
 /* migrate older saves */
@@ -769,7 +771,48 @@ function render(){
   $('hint').textContent=needShift
     ? 'Hold either Shift, then press '+(NAMES[base]||base.toUpperCase())
     : 'Press '+(NAMES[base]||base.toUpperCase());
+  shownAt=performance.now();
   if(ci===0)sayTarget(w);
+}
+/* ---------- per-key mastery ----------
+   Accuracy alone says a key is learned the moment it is pressed correctly once.
+   What a typing game is actually teaching is finding the key WITHOUT hunting,
+   so time-to-press counts too, and nothing is scored until there is evidence. */
+const MASTER_MIN=3;            /* tries before a key has an opinion */
+const FAST_MS=600,SLOW_MS=2600;
+let shownAt=0;
+function noteKey(ch,good,ms){
+  if(ch===undefined||ch===null)return;
+  const k=ch.toLowerCase();
+  const r=S.keys[k]||(S.keys[k]={h:0,m:0,t:0,n:0});
+  if(good){r.h++;if(ms>0&&ms<15000){r.t+=ms;r.n++;}}else r.m++;
+}
+function mastery(k){
+  const r=S.keys[k];if(!r)return null;
+  const tries=r.h+r.m;if(tries<MASTER_MIN)return null;
+  const acc=r.h/tries;
+  const avg=r.n?r.t/r.n:SLOW_MS;
+  const speed=Math.max(0,Math.min(1,(SLOW_MS-avg)/(SLOW_MS-FAST_MS)));
+  return Math.max(0,Math.min(1,acc*.7+speed*.3));
+}
+const DRILLABLE=()=>[...'abcdefghijklmnopqrstuvwxyz0123456789'].filter(c=>keyEls[c]);
+/* Weakest first, then keys never tried — practising what is already fluent is
+   the one thing a drill must not do. */
+function weakKeys(n){
+  const tried=[],fresh=[];
+  DRILLABLE().forEach(c=>{const m=mastery(c);(m===null?fresh:tried).push({c,m});});
+  tried.sort((a,b)=>a.m-b.m);
+  return tried.map(x=>x.c).concat(fresh.map(x=>x.c)).slice(0,n);
+}
+function weakItems(){
+  const w=weakKeys(6);
+  if(w.length<2)return null;
+  const out=w.slice();
+  for(let i=0;i<5;i++){
+    let t='';for(let j=0;j<3;j++)t+=w[Math.floor(Math.random()*w.length)];
+    out.push(t);
+  }
+  return out;
 }
 function tap(ch){handle(ch,false);}
 function handle(ch,real){
@@ -780,6 +823,7 @@ function handle(ch,real){
   const base=needShift?(SHIFTED[want]||want.toLowerCase()):want;
   const ok=real?(ch===want||(!needShift&&ch.toLowerCase()===want.toLowerCase())):(ch===base);
   if(ok){
+    noteKey(want,true,performance.now()-shownAt);
     beep(true);coin(1);
     if(want!==' ')swing();
     ci++;
@@ -795,6 +839,7 @@ function handle(ch,real){
     }
     render();
   }else{
+    noteKey(want,false,0);
     beep(false);
     const k=keyFor(real?(SHIFTED[ch]||ch.toLowerCase()):ch);
     if(k){k.classList.add('bad');setTimeout(()=>k.classList.remove('bad'),240);}
@@ -860,7 +905,7 @@ function toMap(){
   $('viewMap').classList.remove('hidden');$('backBtn').classList.add('hidden');
   document.body.classList.remove('playing');
   sceneBiome=null;applySkin();
-  drawPicker();drawMap();drawRank();
+  drawPicker();drawMap();drawRank();drawWeak();
 }
 function drawMap(){
   const g=$('mapGrid');g.innerHTML='';
@@ -926,6 +971,62 @@ function drawArenaSel(){
   });
   sel.value=BIOMES.some(b=>b.id===S.arena)?S.arena:'auto';
 }
+/* ---------- progress ---------- */
+function toast(msg,ms){
+  const t=document.createElement('div');t.className='toast';t.textContent=msg;
+  document.body.appendChild(t);setTimeout(()=>t.remove(),ms||3200);
+}
+function fig(v,label){return '<div class="fig"><b>'+v+'</b><small>'+label+'</small></div>';}
+function heatClass(m){return m===null?'':(m<.4?'m1':m<.6?'m2':m<.8?'m3':'m4');}
+function drawStats(){
+  let h=0,m=0,t=0,n=0,mastered=0,tried=0;
+  DRILLABLE().forEach(c=>{
+    const r=S.keys[c];if(!r)return;
+    h+=r.h;m+=r.m;t+=r.t;n+=r.n;
+    const q=mastery(c);
+    if(q!==null){tried++;if(q>=.8)mastered++;}
+  });
+  const acc=h+m?Math.round(h/(h+m)*100):0;
+  const avg=n?(t/n/1000).toFixed(2)+'s':'—';
+  const cleared=LESSONS.filter((_,i)=>S.stars[i]).length;
+  const stars=LESSONS.reduce((a,_,i)=>a+(S.stars[i]||0),0);
+  $('statFigs').innerHTML=
+    fig(h.toLocaleString(),'keys hit')+fig(acc+'%','accuracy')+fig(avg,'average to find a key')+
+    fig(mastered+'/'+DRILLABLE().length,'keys mastered')+
+    fig(cleared+'/'+LESSONS.length,'missions cleared')+fig(stars+'/'+LESSONS.length*3,'stars');
+  const g=$('heat');g.innerHTML='';
+  ROWS.forEach(r=>{
+    const row=document.createElement('div');row.className='heatrow';
+    r.forEach(([base])=>{
+      if(base.length!==1||base===' ')return;
+      const d=document.createElement('div');
+      const q=mastery(base);
+      d.className='hk '+heatClass(q);
+      d.textContent=base.toUpperCase();
+      const r2=S.keys[base];
+      d.title=r2?(base.toUpperCase()+': '+r2.h+' right, '+r2.m+' wrong'+
+        (q===null?' — needs '+(MASTER_MIN-(r2.h+r2.m))+' more':' — '+Math.round(q*100)+'%'))
+        :(base.toUpperCase()+': not tried yet');
+      row.appendChild(d);
+    });
+    if(row.children.length)g.appendChild(row);
+  });
+}
+function drawWeak(){
+  const w=weakKeys(6);
+  $('weakList').textContent=w.length?w.join(' '):'play a mission first';
+  $('weakGo').disabled=w.length<2;
+}
+function openStats(){drawStats();$('statSheet').classList.remove('hidden');}
+function closeStats(){$('statSheet').classList.add('hidden');}
+$('statBtn').onclick=openStats;
+$('statClose').onclick=closeStats;
+$('statSheet').addEventListener('click',e=>{if(e.target===$('statSheet'))closeStats();});
+$('weakGo').onclick=()=>{
+  const it=weakItems();
+  if(!it){toast('Play a mission first, then this fills up.');return;}
+  start({n:'Target practice',s:'your weak keys'},it,true);
+};
 function openSet(){drawArenaSel();applySkin();$('setSheet').classList.remove('hidden');}
 function closeSet(){$('setSheet').classList.add('hidden');}
 $('setBtn').onclick=openSet;
@@ -935,7 +1036,9 @@ $('arenaSel').onchange=e=>{
   S.arena=e.target.value;save();
   if(!$('viewPlay').classList.contains('hidden')){pickBiome();document.documentElement.dataset.skin=curBiome().theme;layoutScene();}
 };
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('setSheet').classList.contains('hidden'))closeSet();});
+document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
+  if(!$('setSheet').classList.contains('hidden'))closeSet();
+  if(!$('statSheet').classList.contains('hidden'))closeStats();});
 $('voiceSel').onchange=e=>{S.voiceName=e.target.value;S.voicePick=1;save();speak('Hello, ready to play?');};
 $('backBtn').onclick=toMap;
 $('coinBtn').onclick=()=>{
@@ -954,4 +1057,10 @@ $('customGo').onclick=()=>{
 };
 $('customIn').addEventListener('keydown',e=>{if(e.key==='Enter')$('customGo').click();});
 
-applySkin();drawPicker();drawMap();drawRank();loadClips();
+applySkin();drawPicker();drawMap();drawRank();drawWeak();loadClips();
+/* The version is on screen and a change announces itself: during a screenshot
+   loop the two questions that cost the most are "which version is that?" and
+   "is the deploy stuck, or is it my cache?" */
+$('verTag').textContent='v'+APP_VERSION;
+if(S.ver&&S.ver!==APP_VERSION)toast('Updated to v'+APP_VERSION);
+if(S.ver!==APP_VERSION){S.ver=APP_VERSION;save();}

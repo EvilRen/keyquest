@@ -25,6 +25,7 @@
               stroke-linecap="round" opacity=".9"/>
       </svg>
       <span id="coinN">0</span><span class="shoptag">Shop</span></button>
+    <button class="pill" id="statBtn" aria-haspopup="dialog">Progress</button>
     <button class="pill" id="setBtn" aria-haspopup="dialog">Settings</button>
     <button class="pill hidden" id="backBtn">Missions</button>
   </div>
@@ -37,6 +38,10 @@
   <section id="viewMap">
     <h2>Your fighter</h2>
     <div class="picker" id="picker"></div>
+
+    <h2>Target practice</h2>
+    <p class="lede">The keys you miss most, and the ones you have never tried. This list is built from how you actually played, so it changes as you improve.</p>
+    <div class="row"><button class="pill" id="weakGo">Drill my weak keys</button><span class="weaklist" id="weakList"></span></div>
 
     <h2>Missions</h2>
     <p class="lede">Find the glowing key on screen, press it on the real keyboard. Right key, you strike. Wrong key, the enemy strikes back — lose all your hearts and the mission ends. Clear a mission without a single mistake for three stars.</p>
@@ -53,7 +58,7 @@
       <input type="text" id="customIn" placeholder="dog" autocomplete="off" spellcheck="false">
       <button class="pill" id="customGo">Light it up</button>
     </div>
-    <p class="credit">Character sprites: Tiny RPG Character Asset Pack (Free Soldier &amp; Orc). Extra fighters and enemies are recolours of those two sprites.</p>
+    <p class="credit"><span id="verTag"></span> · Character sprites: Tiny RPG Character Asset Pack (Free Soldier &amp; Orc). Extra fighters and enemies are recolours of those two sprites.</p>
   </section>
 
   <section id="viewPlay" class="hidden">
@@ -75,6 +80,16 @@
     <p class="lede">Spend coins on a companion or a new arena colour.</p>
     <div class="shop" id="shopGrid"></div>
   </section>
+</div>
+<div class="sheet hidden" id="statSheet">
+  <div class="sheetBox" role="dialog" aria-modal="true" aria-labelledby="statTitle">
+    <h3 id="statTitle">Your progress</h3>
+    <div class="figs" id="statFigs"></div>
+    <h4 class="subh">Every key, how well you know it</h4>
+    <div class="heat" id="heat"></div>
+    <p class="legend"><i class="l0"></i>not tried <i class="l1"></i>shaky <i class="l2"></i>getting there <i class="l3"></i>solid <i class="l4"></i>mastered</p>
+    <button class="pill wide" id="statClose">Done</button>
+  </div>
 </div>
 <div class="sheet hidden" id="setSheet">
   <div class="sheetBox" role="dialog" aria-modal="true" aria-labelledby="setTitle">
