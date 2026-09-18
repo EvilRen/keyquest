@@ -12,8 +12,11 @@ Built with my seven-year-old, whose idea this was.
   number row, symbols, long words, sentences, speed drills, passwords
 - **Dual-legend keyboard** — English and Hebrew on every keycap, matching a
   physical Israeli keyboard. Hebrew legends toggle off in the header
-- **6 playable fighters** with different hearts and coin rates, unlocked with
-  coins. The menu shows the one you are using; the full roster is a sheet with
+- **36 playable fighters** with different hearts and coin rates. Twenty-four are
+  bought, on a ladder from 100 to 20,000 coins; the other twelve cannot be
+  bought at any price and open only by clearing missions, mastering keys, typing
+  fast or accurately, keeping a streak, meeting every enemy or fighting in every
+  arena. The menu shows the one you are using; the full roster is a sheet with
   tabs and a search, so the menu is the same height at six fighters or sixty
 - **10 named enemies** that appear as the missions get harder, recorded in a
   bestiary — the ones you have not met yet are shadows

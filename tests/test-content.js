@@ -11,7 +11,7 @@ const {install}=require('./dom-stub.js');
 
 const SRC=path.join(__dirname,'..','src','app.js');
 const code=fs.readFileSync(SRC,'utf8')+
-  '\n;globalThis.__T={LESSONS,keyEls,NAMES,VTOKENS,SHOP,BIOMES,DAILIES,ACH,VGROUPS,vGroupOf,WHATS_NEW,APP_VERSION,minorOf,FIGHTERS,BESTIARY,BASE,DEF,LW,RANKS,SHIFTED,ROWS,HE,Z};';
+  '\n;globalThis.__T={LESSONS,keyEls,NAMES,VTOKENS,SHOP,BIOMES,DAILIES,ACH,VGROUPS,vGroupOf,WHATS_NEW,APP_VERSION,minorOf,FIGHTERS,DRILLABLE,S,BESTIARY,BASE,DEF,LW,RANKS,SHIFTED,ROWS,HE,Z};';
 
 const sandbox=install();
 vm.createContext(sandbox);
@@ -119,6 +119,51 @@ ok('the default arena setting is a real choice',
    T.DEF.arena==='auto'||!!biome(T.DEF.arena));
 ok('the default fighter and skin are owned by default',
    T.DEF.owned.includes(T.DEF.hero)&&T.DEF.owned.includes(T.DEF.skin));
+
+console.log('the roster');
+ok('every fighter is complete',
+   T.FIGHTERS.every(f=>f.id&&f.name&&f.base&&f.tint&&f.note&&f.lives>0&&f.mult>0),
+   'bad: '+JSON.stringify(T.FIGHTERS.filter(f=>!(f.id&&f.name&&f.base&&f.tint&&f.note&&f.lives>0&&f.mult>0)).map(f=>f.id)));
+ok('no two fighters share a name',new Set(T.FIGHTERS.map(f=>f.name)).size===T.FIGHTERS.length);
+ok('no two fighters look identical',
+   new Set(T.FIGHTERS.map(f=>f.base+'|'+f.tint)).size===T.FIGHTERS.length,
+   'duplicated looks: '+JSON.stringify((()=>{const seen={},dup=[];T.FIGHTERS.forEach(f=>{const k=f.base+'|'+f.tint;
+     if(seen[k])dup.push([seen[k],f.id]);else seen[k]=f.id;});return dup;})()));
+ok('every fighter is either bought or earned, never neither',
+   T.FIGHTERS.every(f=>f.cost>0||f.req||f.cost===0),
+   'stranded: '+JSON.stringify(T.FIGHTERS.filter(f=>!(f.cost>0||f.req||f.cost===0)).map(f=>f.id)));
+ok('exactly one fighter is free at the start',
+   T.FIGHTERS.filter(f=>!f.req&&f.cost===0).length===1);
+ok('every earned fighter states what earns it',
+   T.FIGHTERS.filter(f=>f.req).every(f=>f.req.t&&typeof f.req.ok==='function'));
+
+/* The economy has to close both ways: nothing unlocked before it is earned,
+   and nothing that can never be earned. A requirement asking for more keys
+   than the keyboard has would be a fighter nobody can ever reach. */
+const blank={hits:0,miss:0,mastered:0,acc:0,avg:0,cleared:0,stars:0};
+ok('no fighter is already unlocked on a fresh save',(()=>{
+  const b0=T.S.bestStreak,f0=T.S.seenFoe,a0=T.S.seenArena;
+  T.S.bestStreak=0;T.S.seenFoe={};T.S.seenArena={};
+  const bad=T.FIGHTERS.filter(f=>f.req).filter(f=>{try{return f.req.ok(blank);}catch(e){return true;}});
+  T.S.bestStreak=b0;T.S.seenFoe=f0;T.S.seenArena=a0;
+  return bad.length===0;
+})());
+ok('every earned fighter is actually reachable',(()=>{
+  const b0=T.S.bestStreak,f0=T.S.seenFoe,a0=T.S.seenArena;
+  T.S.bestStreak=9999;
+  T.S.seenFoe={};T.BESTIARY.forEach(e=>T.S.seenFoe[e.id]=1);
+  T.S.seenArena={};T.BIOMES.forEach(x=>T.S.seenArena[x.id]=1);
+  const best={hits:1e7,miss:0,mastered:T.DRILLABLE().length,acc:100,avg:1,
+              cleared:T.LESSONS.length,stars:T.LESSONS.length*3};
+  const bad=T.FIGHTERS.filter(f=>f.req).filter(f=>{try{return !f.req.ok(best);}catch(e){return true;}});
+  T.S.bestStreak=b0;T.S.seenFoe=f0;T.S.seenArena=a0;
+  if(bad.length)console.log('         unreachable: '+JSON.stringify(bad.map(f=>f.id+' ('+f.req.t+')')));
+  return bad.length===0;
+})());
+ok('the coin ladder never goes backwards',(()=>{
+  const c=T.FIGHTERS.filter(f=>!f.req).map(f=>f.cost);
+  return c.every((v,i)=>i===0||v>=c[i-1]);
+})(),'costs: '+JSON.stringify(T.FIGHTERS.filter(f=>!f.req).map(f=>f.cost)));
 
 console.log('progression');
 ok('ranks are in ascending XP order',

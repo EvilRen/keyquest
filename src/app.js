@@ -1,8 +1,9 @@
-const APP_VERSION='1.9.0';
+const APP_VERSION='2.0.0';
 /* The notes record which release they were written for, and a test fails a
    feature release that ships without rewriting them. Memory does not keep
    release notes current; a gate does. */
-const WHATS_NEW={for:'1.9.0',items:[
+const WHATS_NEW={for:'2.0.0',items:[
+ ['Thirty-six fighters','Twenty-four to buy, on a ladder that now runs to twenty thousand coins — and twelve more that no amount of coins will buy. Those open by clearing missions, mastering keys, typing fast, typing accurately, keeping a streak, meeting every enemy and fighting in every arena.'],
  ['It says what you press','Every key you hit is said back to you — the right ones and the wrong ones — so you hear what your finger actually did. Turn it off in Settings if it is too chatty.'],
  ['Onward','Beat an enemy and your fighter walks on through the world to meet the next one, instead of starting the scene again.'],
  ['A bestiary','Every enemy you fight is recorded. The ones you have not met are shadows — open it from Progress.'],
@@ -28,12 +29,56 @@ const AN={idle:{n:6,fps:8,loop:1},walk:{n:8,fps:10,loop:1},atk:{n:6,fps:13,loop:
 
 /* playable fighters — recolours of the two base sprites, different stats */
 const FIGHTERS=[
- {id:'cadet', base:'soldier',tint:'none',                                  name:'Cadet',  note:'Standard issue',  lives:3,mult:1,cost:0},
- {id:'ranger',base:'soldier',tint:'hue-rotate(115deg) saturate(1.2)',      name:'Ranger', note:'One extra heart', lives:4,mult:1,cost:150},
- {id:'phantom',base:'soldier',tint:'hue-rotate(250deg) brightness(1.15)',  name:'Phantom',note:'Double coins',    lives:3,mult:2,cost:400},
- {id:'grunt', base:'orc',    tint:'none',                                  name:'Grunt',  note:'Heavy axe',       lives:3,mult:1,cost:100},
- {id:'magma', base:'orc',    tint:'hue-rotate(-65deg) saturate(1.7)',      name:'Magma',  note:'One extra heart', lives:4,mult:1,cost:300},
- {id:'titan', base:'orc',    tint:'hue-rotate(175deg) brightness(.9)',     name:'Titan',  note:'Five hearts',     lives:5,mult:1,cost:700}
+ {id:'cadet',       base:'soldier', tint:'none',                                        name:'Cadet',         note:'Standard issue',                lives:3,mult:1,cost:0},
+ {id:'grunt',       base:'orc',     tint:'hue-rotate(95deg) saturate(1.3)',             name:'Grunt',         note:'Heavy axe',                     lives:3,mult:1,cost:100},
+ {id:'ranger',      base:'soldier', tint:'hue-rotate(120deg) saturate(1.4)',            name:'Ranger',        note:'One extra heart',               lives:4,mult:1,cost:150},
+ {id:'magma',       base:'orc',     tint:'hue-rotate(-65deg) saturate(1.7)',            name:'Magma',         note:'One extra heart',               lives:4,mult:1,cost:300},
+ {id:'phantom',     base:'soldier', tint:'hue-rotate(250deg) brightness(.9)',           name:'Phantom',       note:'Double coins',                  lives:3,mult:2,cost:400},
+ {id:'titan',       base:'orc',     tint:'hue-rotate(175deg) brightness(.9)',           name:'Titan',         note:'Five hearts',                   lives:5,mult:1,cost:700},
+ {id:'scout2',      base:'soldier', tint:'hue-rotate(40deg) saturate(1.5)',             name:'Vanguard',      note:'Four hearts, double coins',     lives:4,mult:2,cost:900},
+ {id:'frost',       base:'soldier', tint:'hue-rotate(195deg) saturate(1.6) brightness(1.1)', name:'Frostguard',    note:'Five hearts',                   lives:5,mult:1,cost:1150},
+ {id:'ash',         base:'orc',     tint:'hue-rotate(20deg) saturate(.5) brightness(.85)', name:'Ashblade',      note:'Double coins',                  lives:3,mult:2,cost:1450},
+ {id:'jade',        base:'orc',     tint:'hue-rotate(115deg) saturate(1.8)',            name:'Jade',          note:'Five hearts, double coins',     lives:5,mult:2,cost:1800},
+ {id:'coral',       base:'soldier', tint:'hue-rotate(330deg) saturate(1.6)',            name:'Coral',         note:'Four hearts',                   lives:4,mult:1,cost:2200},
+ {id:'storm',       base:'soldier', tint:'hue-rotate(215deg) saturate(1.9) brightness(1.15)', name:'Stormcall',     note:'Triple coins',                  lives:3,mult:3,cost:2700},
+ {id:'bronze',      base:'orc',     tint:'sepia(1) saturate(2.2) hue-rotate(-15deg)',   name:'Bronze',        note:'Five hearts',                   lives:5,mult:1,cost:3300},
+ {id:'violet',      base:'soldier', tint:'hue-rotate(275deg) saturate(1.7)',            name:'Violet',        note:'Four hearts, triple coins',     lives:4,mult:3,cost:4000},
+ {id:'rust',        base:'orc',     tint:'hue-rotate(-25deg) saturate(1.9) brightness(.9)', name:'Rustclad',      note:'Six hearts',                    lives:6,mult:1,cost:4800},
+ {id:'mint',        base:'soldier', tint:'hue-rotate(150deg) saturate(1.3) brightness(1.2)', name:'Mint',          note:'Triple coins',                  lives:3,mult:3,cost:5700},
+ {id:'onyx',        base:'orc',     tint:'saturate(.15) brightness(.7) contrast(1.4)',  name:'Onyx',          note:'Six hearts',                    lives:6,mult:1,cost:6800},
+ {id:'solar',       base:'soldier', tint:'hue-rotate(50deg) saturate(2.2) brightness(1.25)', name:'Solar',         note:'Five hearts, triple coins',     lives:5,mult:3,cost:8000},
+ {id:'abyss',       base:'orc',     tint:'hue-rotate(235deg) saturate(1.5) brightness(.75)', name:'Abyss',         note:'Six hearts, double coins',      lives:6,mult:2,cost:9400},
+ {id:'ivory',       base:'soldier', tint:'saturate(.2) brightness(1.45)',               name:'Ivory',         note:'Six hearts, triple coins',      lives:6,mult:3,cost:11000},
+ {id:'cinder',      base:'orc',     tint:'hue-rotate(-40deg) saturate(2.4) brightness(1.1)', name:'Cinder',        note:'Six hearts, triple coins',      lives:6,mult:3,cost:12800},
+ {id:'tide',        base:'soldier', tint:'hue-rotate(185deg) saturate(2) brightness(.95)', name:'Tideborn',      note:'Six hearts, triple coins',      lives:6,mult:3,cost:14800},
+ {id:'gilt',        base:'orc',     tint:'sepia(1) saturate(3) hue-rotate(5deg) brightness(1.2)', name:'Gilt',          note:'Six hearts, triple coins',      lives:6,mult:3,cost:17000},
+ {id:'prism',       base:'soldier', tint:'hue-rotate(300deg) saturate(2.5) contrast(1.2)', name:'Prism',         note:'Six hearts, triple coins',      lives:6,mult:3,cost:20000},
+ /* Not for sale: these open by doing something, so coins cannot shortcut them.
+    A prize you can also just buy is not a prize. */
+ {id:'cadet2',      base:'soldier', tint:'hue-rotate(75deg) saturate(1.2)',             name:'Recruit Prime', note:'Four hearts',                   lives:4,mult:1,cost:0,
+  req:{t:'Clear 4 missions',              ok:d=>d.cleared>=4}},
+ {id:'pathfinder',  base:'orc',     tint:'hue-rotate(160deg) saturate(1.1)',            name:'Pathfinder',    note:'Four hearts, double coins',     lives:4,mult:2,cost:0,
+  req:{t:'Clear 8 missions',              ok:d=>d.cleared>=8}},
+ {id:'marshal',     base:'soldier', tint:'hue-rotate(15deg) saturate(1.8)',             name:'Marshal',       note:'Six hearts',                    lives:6,mult:1,cost:0,
+  req:{t:'Clear every mission',           ok:d=>d.cleared>=LESSONS.length}},
+ {id:'keeper',      base:'soldier', tint:'hue-rotate(95deg) saturate(1.6) brightness(1.1)', name:'Keykeeper',     note:'Double coins',                  lives:3,mult:2,cost:0,
+  req:{t:'Master 10 keys',                ok:d=>d.mastered>=10}},
+ {id:'adept',       base:'orc',     tint:'hue-rotate(205deg) saturate(1.4)',            name:'Adept',         note:'Five hearts, double coins',     lives:5,mult:2,cost:0,
+  req:{t:'Master 20 keys',                ok:d=>d.mastered>=20}},
+ {id:'grandmaster', base:'soldier', tint:'hue-rotate(45deg) saturate(2.6) brightness(1.3)', name:'Grandmaster',   note:'Six hearts, triple coins',      lives:6,mult:3,cost:0,
+  req:{t:'Master 30 keys',                ok:d=>d.mastered>=30}},
+ {id:'swift',       base:'soldier', tint:'hue-rotate(170deg) saturate(1.9) brightness(1.15)', name:'Swift',         note:'Triple coins',                  lives:3,mult:3,cost:0,
+  req:{t:'Find keys in under 0.8s',       ok:d=>d.avg>0&&d.avg<800&&d.hits>=200}},
+ {id:'precise',     base:'orc',     tint:'hue-rotate(265deg) saturate(1.3)',            name:'Precise',       note:'Five hearts',                   lives:5,mult:1,cost:0,
+  req:{t:'95% accuracy over 300 keys',    ok:d=>d.hits>=300&&d.acc>=95}},
+ {id:'marathon',    base:'orc',     tint:'hue-rotate(-15deg) saturate(1.6) brightness(.95)', name:'Marathon',      note:'Six hearts, double coins',      lives:6,mult:2,cost:0,
+  req:{t:'Hit 5,000 keys',                ok:d=>d.hits>=5000}},
+ {id:'faithful',    base:'soldier', tint:'hue-rotate(320deg) saturate(1.4) brightness(1.05)', name:'Faithful',      note:'Four hearts, double coins',     lives:4,mult:2,cost:0,
+  req:{t:'A 7-day streak',                ok:d=>(S.bestStreak||0)>=7}},
+ {id:'hunter',      base:'orc',     tint:'hue-rotate(60deg) saturate(2) brightness(.9)', name:'Hunter',        note:'Five hearts, double coins',     lives:5,mult:2,cost:0,
+  req:{t:'Meet every enemy',              ok:d=>Object.keys(S.seenFoe||{}).length>=BESTIARY.length}},
+ {id:'wanderer',    base:'soldier', tint:'hue-rotate(225deg) saturate(1.7) brightness(1.1)', name:'Wanderer',      note:'Five hearts, triple coins',     lives:5,mult:3,cost:0,
+  req:{t:'Fight in every arena',          ok:d=>Object.keys(S.seenArena||{}).length>=BIOMES.length}}
 ];
 /* bestiary — unlocks as the missions get harder */
 const BESTIARY=[
@@ -482,7 +527,7 @@ function closeBest(){$('bestSheet').classList.add('hidden');openStats();}
    The menu shows the fighter you are using and nothing else; the full roster is
    a sheet, so the menu is the same height with six fighters or sixty. */
 let hTab='all',hFilter='';
-function heroOwned(f){return S.owned.includes(f.id)||f.cost===0;}
+function heroOwned(f){return S.owned.includes(f.id)||(!f.req&&f.cost===0);}
 function drawHeroSummary(){
   const box=$('picker');if(!box)return;
   box.innerHTML='';
@@ -523,12 +568,13 @@ function drawHeroSheet(){
     b.appendChild(spriteCanvas(f.base,f.tint,false));
     const n=document.createElement('b');n.textContent=f.name;b.appendChild(n);
     const s3=document.createElement('small');s3.textContent=f.note;b.appendChild(s3);
-    const cst=document.createElement('span');cst.className='cost';
-    cst.textContent=owned?(S.hero===f.id?'Selected':'Tap to use'):f.cost+' coins';
+    const cst=document.createElement('span');cst.className='cost'+(f.req?' earn':'');
+    cst.textContent=owned?(S.hero===f.id?'Selected':'Tap to use'):(f.req?f.req.t:f.cost.toLocaleString()+' coins');
     b.appendChild(cst);
     b.addEventListener('click',()=>{
       if(!owned){
-        if(S.coins<f.cost){cst.textContent='Need '+(f.cost-S.coins)+' more';return;}
+        if(f.req){cst.textContent=f.req.t+' to unlock';return;}
+        if(S.coins<f.cost){cst.textContent='Need '+(f.cost-S.coins).toLocaleString()+' more';return;}
         S.coins-=f.cost;S.owned.push(f.id);$('coinN').textContent=S.coins;
       }
       S.hero=f.id;save();drawHeroSheet();drawHeroTabs();drawHeroSummary();
@@ -1251,6 +1297,10 @@ function checkProgress(){
   ACH.forEach(a=>{
     if(S.ach[a.id])return;
     if(a.ok(d)){S.ach[a.id]=1;toast('ACHIEVEMENT — '+a.t,6000);}
+  });
+  FIGHTERS.forEach(f=>{
+    if(!f.req||S.owned.includes(f.id))return;
+    if(f.req.ok(d)){S.owned.push(f.id);toast('NEW FIGHTER — '+f.name+' · '+f.req.t,6000);}
   });
   save();
 }
