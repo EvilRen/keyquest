@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Key Quest">
+  <defs>
+    <linearGradient id="cap" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1B3050"/><stop offset="1" stop-color="#101F35"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" fill="#070E19"/>
+  <!-- a keycap, the thing the whole game is about -->
+  <rect x="9" y="9" width="46" height="42" rx="5" fill="url(#cap)" stroke="#2E4A6E" stroke-width="2"/>
+  <rect x="9" y="44" width="46" height="7" rx="3" fill="#35E0D0" opacity=".9"/>
+
+  <g fill="#35E0D0"><rect x="22" y="17" width="4" height="4"/><rect x="26" y="17" width="4" height="4"/><rect x="38" y="17" width="4" height="4"/><rect x="22" y="21" width="4" height="4"/><rect x="26" y="21" width="4" height="4"/><rect x="34" y="21" width="4" height="4"/><rect x="22" y="25" width="4" height="4"/><rect x="26" y="25" width="4" height="4"/><rect x="30" y="25" width="4" height="4"/><rect x="22" y="29" width="4" height="4"/><rect x="26" y="29" width="4" height="4"/><rect x="30" y="29" width="4" height="4"/><rect x="22" y="33" width="4" height="4"/><rect x="26" y="33" width="4" height="4"/><rect x="34" y="33" width="4" height="4"/><rect x="22" y="37" width="4" height="4"/><rect x="26" y="37" width="4" height="4"/><rect x="38" y="37" width="4" height="4"/></g>
+  <!-- the finger-zone dot the real keycaps carry -->
+  <rect x="14" y="14" width="6" height="6" fill="#FFB43A"/>
+</svg>
