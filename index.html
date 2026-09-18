@@ -25,10 +25,7 @@
               stroke-linecap="round" opacity=".9"/>
       </svg>
       <span id="coinN">0</span><span class="shoptag">Shop</span></button>
-    <select class="pill" id="voiceSel" title="Pick a voice"></select>
-    <button class="pill" id="soundBtn">Voice on</button>
-    <button class="pill" id="sfxBtn">Sound on</button>
-    <button class="pill hidden" id="hebBtn">א Hebrew keys on</button>
+    <button class="pill" id="setBtn" aria-haspopup="dialog">Settings</button>
     <button class="pill hidden" id="backBtn">Missions</button>
   </div>
   <div class="rankbar">
@@ -78,6 +75,22 @@
     <p class="lede">Spend coins on a companion or a new arena colour.</p>
     <div class="shop" id="shopGrid"></div>
   </section>
+</div>
+<div class="sheet hidden" id="setSheet">
+  <div class="sheetBox" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+    <h3 id="setTitle">Settings</h3>
+    <div class="srow"><span>Letter voice<small>says the letter and a word for it</small></span>
+      <button class="pill" id="soundBtn">On</button></div>
+    <div class="srow"><span>Game sound<small>swings, hits and the coin chime</small></span>
+      <button class="pill" id="sfxBtn">On</button></div>
+    <div class="srow"><span>Hebrew on keys<small>second legend on every keycap</small></span>
+      <button class="pill" id="hebBtn">On</button></div>
+    <div class="srow"><span>Computer voice<small>starred ones sound the most human</small></span>
+      <select class="pill" id="voiceSel"></select></div>
+    <div class="srow"><span>Arena<small>where the fights happen</small></span>
+      <select class="pill" id="arenaSel"></select></div>
+    <button class="pill wide" id="setClose">Done</button>
+  </div>
 </div>
 <div class="buddy hidden" id="buddy"></div>
 <script src="src/app.js"></script>

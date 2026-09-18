@@ -460,8 +460,11 @@ function loadVoices(){
   if(!window.speechSynthesis)return;
   voices=speechSynthesis.getVoices().filter(v=>/^en/i.test(v.lang));
   const sel=$('voiceSel');sel.innerHTML='';
-  if(!voices.length){sel.classList.add('hidden');return;}
-  sel.classList.remove('hidden');
+  /* Hide the whole row, not just the control: a label with nothing beside it
+     reads as a broken setting rather than an unavailable one. */
+  const row=sel.closest?sel.closest('.srow'):null;
+  if(!voices.length){(row||sel).classList.add('hidden');return;}
+  (row||sel).classList.remove('hidden');sel.classList.remove('hidden');
   voices.sort((a,b)=>(GOOD_VOICE.test(b.name)?1:0)-(GOOD_VOICE.test(a.name)?1:0));
   voices.forEach(v=>{
     const o=document.createElement('option');o.value=v.name;
@@ -712,7 +715,6 @@ function start(lesson,list,isCustom,index){
   $('viewMap').classList.add('hidden');$('viewShop').classList.add('hidden');
   $('viewPlay').classList.remove('hidden');$('backBtn').classList.remove('hidden');
   document.body.classList.add('playing');
-  $('hebBtn').classList.remove('hidden');
   pickBiome();document.documentElement.dataset.skin=curBiome().theme;
   layoutScene();
   startLoop();newFoe();render();
@@ -856,7 +858,6 @@ function toMap(){
   stopLoop();
   $('viewPlay').classList.add('hidden');$('viewShop').classList.add('hidden');
   $('viewMap').classList.remove('hidden');$('backBtn').classList.add('hidden');
-  $('hebBtn').classList.add('hidden');
   document.body.classList.remove('playing');
   sceneBiome=null;applySkin();
   drawPicker();drawMap();drawRank();
@@ -901,14 +902,40 @@ function applySkin(){
   const b=$('buddy'),item=SHOP.find(s=>s.id===S.buddy);
   if(item){b.textContent=item.face;b.classList.remove('hidden');}else b.classList.add('hidden');
   document.body.classList.toggle('hide-he',!S.heb);
-  $('soundBtn').textContent=S.voice?'Voice on':'Voice off';
-  $('sfxBtn').textContent=S.sfx?'Sound on':'Sound off';
-  $('hebBtn').textContent=S.heb?'א Hebrew keys on':'א Hebrew keys off';
+  $('soundBtn').textContent=S.voice?'On':'Off';
+  $('sfxBtn').textContent=S.sfx?'On':'Off';
+  $('hebBtn').textContent=S.heb?'On':'Off';
+  $('soundBtn').classList.toggle('off',!S.voice);
+  $('sfxBtn').classList.toggle('off',!S.sfx);
+  $('hebBtn').classList.toggle('off',!S.heb);
   $('coinN').textContent=S.coins;
 }
 $('soundBtn').onclick=()=>{S.voice=S.voice?0:1;save();applySkin();};
 $('sfxBtn').onclick=()=>{S.sfx=S.sfx?0:1;save();applySkin();if(S.sfx)sfx('swing');};
 $('hebBtn').onclick=()=>{S.heb=S.heb?0:1;save();applySkin();};
+/* One panel for every setting: the header had grown six controls and was about
+   to grow more. Registered once at startup, both openers and both closers. */
+function drawArenaSel(){
+  const sel=$('arenaSel');if(!sel)return;
+  sel.innerHTML='';
+  const add=(v,t)=>{const o=document.createElement('option');o.value=v;o.textContent=t;sel.appendChild(o);};
+  add('auto','Follow the mission');
+  BIOMES.forEach(b=>{
+    const locked=SHOP.some(x=>x.id===b.id)&&!S.owned.includes(b.id);
+    if(!locked)add(b.id,b.name);
+  });
+  sel.value=BIOMES.some(b=>b.id===S.arena)?S.arena:'auto';
+}
+function openSet(){drawArenaSel();applySkin();$('setSheet').classList.remove('hidden');}
+function closeSet(){$('setSheet').classList.add('hidden');}
+$('setBtn').onclick=openSet;
+$('setClose').onclick=closeSet;
+$('setSheet').addEventListener('click',e=>{if(e.target===$('setSheet'))closeSet();});
+$('arenaSel').onchange=e=>{
+  S.arena=e.target.value;save();
+  if(!$('viewPlay').classList.contains('hidden')){pickBiome();document.documentElement.dataset.skin=curBiome().theme;layoutScene();}
+};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('setSheet').classList.contains('hidden'))closeSet();});
 $('voiceSel').onchange=e=>{S.voiceName=e.target.value;S.voicePick=1;save();speak('Hello, ready to play?');};
 $('backBtn').onclick=toMap;
 $('coinBtn').onclick=()=>{
@@ -916,8 +943,7 @@ $('coinBtn').onclick=()=>{
     stopLoop();
     $('viewMap').classList.add('hidden');$('viewPlay').classList.add('hidden');
     $('viewShop').classList.remove('hidden');$('backBtn').classList.remove('hidden');
-    $('hebBtn').classList.add('hidden');
-    document.body.classList.remove('playing');drawShop();
+      document.body.classList.remove('playing');drawShop();
   }else toMap();
 };
 $('sayBtn').onclick=()=>sayTarget(items[ix]||'');
