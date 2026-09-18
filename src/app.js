@@ -1,8 +1,9 @@
-const APP_VERSION='2.0.0';
+const APP_VERSION='2.1.0';
 /* The notes record which release they were written for, and a test fails a
    feature release that ships without rewriting them. Memory does not keep
    release notes current; a gate does. */
-const WHATS_NEW={for:'2.0.0',items:[
+const WHATS_NEW={for:'2.1.0',items:[
+ ['Straight into a mission','The big button at the top starts wherever you left off — one tap from opening the game to playing. The missions come first now, with the fighter and the drills below them.'],
  ['Thirty-six fighters','Twenty-four to buy, on a ladder that now runs to twenty thousand coins — and twelve more that no amount of coins will buy. Those open by clearing missions, mastering keys, typing fast, typing accurately, keeping a streak, meeting every enemy and fighting in every arena.'],
  ['It says what you press','Every key you hit is said back to you — the right ones and the wrong ones — so you hear what your finger actually did. Turn it off in Settings if it is too chatty.'],
  ['Onward','Beat an enemy and your fighter walks on through the world to meet the next one, instead of starting the scene again.'],
@@ -1153,7 +1154,7 @@ function toMap(){
   $('viewMap').classList.remove('hidden');$('backBtn').classList.add('hidden');
   document.body.classList.remove('playing');
   sceneBiome=null;$('foeName').textContent='';applySkin();
-  drawPicker();drawMap();drawRank();drawWeak();
+  drawPicker();drawMap();drawRank();drawWeak();drawPlayNow();
 }
 function drawMap(){
   const g=$('mapGrid');g.innerHTML='';
@@ -1351,6 +1352,25 @@ function drawStats(){
     if(row.children.length)g.appendChild(row);
   });
 }
+/* One tap from opening the page to playing. The menu's job is to start a
+   mission, so that is the first thing on it and it knows which one is next. */
+function nextMission(){
+  for(let i=0;i<LESSONS.length;i++)if(!S.stars[i])return i;
+  for(let i=0;i<LESSONS.length;i++)if(S.stars[i]<3)return i;   /* nothing left but three stars to chase */
+  return 0;
+}
+function drawPlayNow(){
+  const b=$('playNow');if(!b)return;
+  const i=nextMission(),L2=LESSONS[i],st=S.stars[i]||0;
+  const fresh=!Object.keys(S.stars).length;
+  $('playNowT').textContent=(fresh?'Start playing':(st?'Play again':'Continue'))+' — '+L2.n;
+  $('playNowS').textContent='Mission '+String(i+1).padStart(2,'0')+' · '+L2.s+
+    (st?' · '+'★'.repeat(st)+'☆'.repeat(3-st):'');
+  b.onclick=()=>start(L2,L2.items,false,i);
+  /* The rules are for someone who has not played; after that they are just
+     three lines between the player and the missions. */
+  const r=$('rulesLede');if(r)r.classList.toggle('hidden',!fresh);
+}
 function drawWeak(){
   const w=weakKeys(6);
   $('weakList').textContent=w.length?w.join(' '):'play a mission first';
@@ -1424,7 +1444,7 @@ $('customGo').onclick=()=>{
 };
 $('customIn').addEventListener('keydown',e=>{if(e.key==='Enter')$('customGo').click();});
 
-applySkin();drawPicker();drawMap();drawRank();drawWeak();loadClips();
+applySkin();drawPicker();drawMap();drawRank();drawWeak();drawPlayNow();loadClips();
 /* The version is on screen and a change announces itself: during a screenshot
    loop the two questions that cost the most are "which version is that?" and
    "is the deploy stuck, or is it my cache?" */
