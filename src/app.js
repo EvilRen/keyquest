@@ -1,8 +1,9 @@
-const APP_VERSION='1.7.0';
+const APP_VERSION='1.8.0';
 /* The notes record which release they were written for, and a test fails a
    feature release that ships without rewriting them. Memory does not keep
    release notes current; a gate does. */
-const WHATS_NEW={for:'1.7.0',items:[
+const WHATS_NEW={for:'1.8.0',items:[
+ ['Onward','Beat an enemy and your fighter walks on through the world to meet the next one, instead of starting the scene again.'],
  ['A bestiary','Every enemy you fight is recorded. The ones you have not met are shadows — open it from Progress.'],
  ['A roster that fits','The menu shows the fighter you are using; Change fighter opens the full roster with tabs and a search, so the menu stays the same height however many fighters there are.'],
  ['Ten places to fight','Missions now travel — a moonlit wood, a crystal cave, sun dunes, frost peaks, an orbit deck, ashfall and a keep hall, as well as the city. Fireflies drift, snow falls and embers rise.'],
@@ -362,9 +363,31 @@ function buildSky(){
       a.push([Math.round(rnd(i*131)*CW),HORIZON+2+Math.round(rnd(i*137)*(d-3)),Math.round(6+rnd(i*139)*12)]);return a;})()
   };
 }
+/* The environment scrolls under the fighters while the hero walks on the spot.
+   Drawing the scene twice, one width apart, makes the seam continuous — the
+   art repeats rather than sliding off into an empty canvas. */
+let camX=0,travelling=false;
 function drawArena(ts){
-  const b=curBiome(),p=b.pal;
-  b.paint(p,SD,ts||0);
+  const b=curBiome(),p=b.pal,off=camX%CW;
+  if(!off){b.paint(p,SD,ts||0);return;}
+  cx.save();
+  cx.translate(-off,0);b.paint(p,SD,ts||0);
+  cx.translate(CW,0);b.paint(p,SD,ts||0);
+  cx.restore();
+}
+/* Between enemies the hero walks forward instead of being teleported back
+   off-screen and marched in again, which read as starting over. */
+function advance(cb){
+  travelling=true;
+  hero.x=HERO_HOME;setAnim(hero,'walk');
+  const t0=performance.now(),from=camX,dist=CW*.55,dur=850;
+  const step2=()=>{
+    const k=Math.min(1,(performance.now()-t0)/dur);
+    camX=from+dist*(k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2);   /* ease in and out */
+    if(k<1){requestAnimationFrame(step2);return;}
+    camX%=CW;travelling=false;setAnim(hero,'idle');cb();
+  };
+  requestAnimationFrame(step2);
 }
 const HEART=[".11.11.","1111111","1111111",".11111.","..111..","...1..."];
 function drawHearts(){
@@ -410,7 +433,7 @@ function loop(ts){
   cx.clearRect(0,0,CW,CH);
   drawArena(ts);
   step(foe,ts,FOE_HOME,-1);
-  step(hero,ts,HERO_HOME,1);
+  if(!travelling)step(hero,ts,HERO_HOME,1);
   blit(foe,ts,true);
   blit(hero,ts,false);
   drawFoeBar();drawHearts();
@@ -866,16 +889,18 @@ function start(lesson,list,isCustom,index){
   if(today().arenas.indexOf(bid)<0)today().arenas.push(bid);
   if(L&&L.n==='Target practice')today().drills++;
   layoutScene();
-  startLoop();newFoe();render();
+  camX=0;startLoop();newFoe(true);render();
 }
-function newFoe(){
+function newFoe(entering){
   const pool=Math.max(3,Math.min(BESTIARY.length,(lvl<0?BESTIARY.length:lvl+3)));
   const e=BESTIARY[Math.floor(Math.random()*pool)];
   foe.base=e.base;foe.tint=e.tint;foe.id=e.id;
   S.seenFoe[e.id]=1;save();
   $('foeName').textContent=e.name;
   foe.x=CW+40;foe.alpha=1;setAnim(foe,'walk');
-  hero.x=-70;hero.alpha=1;setAnim(hero,'walk');
+  hero.alpha=1;
+  if(entering){hero.x=-70;setAnim(hero,'walk');}
+  else{hero.x=HERO_HOME;setAnim(hero,'idle');}
   hpMax=Math.max(1,(items[ix]||'').replace(/ /g,'').length);hp=hpMax;
 }
 function swing(){
@@ -896,7 +921,10 @@ function counterSwing(){
 function killFoe(cb){
   busy=true;
   setTimeout(()=>{setAnim(foe,'death');sfx('death');},200);
-  setTimeout(()=>{busy=false;cb();},1500);
+  setTimeout(()=>{
+    foe.alpha=0;
+    advance(()=>{busy=false;cb();});
+  },1150);
 }
 function render(){
   const w=items[ix]||'';
