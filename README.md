@@ -75,10 +75,13 @@ output directory as the repo root.
 ## Structure
 
 ```
-index.html        markup only
-src/styles.css    all styling, themed with CSS custom properties
-src/app.js        game logic, sprite animation, keyboard model
-assets/atlas.png  sprite atlas, 44x32 frames, 10 animation rows
+index.html           markup only
+src/styles.css       all styling, themed with CSS custom properties
+src/app.js           game logic, sprite animation, keyboard model
+assets/atlas.png     sprite atlas, 44x32 frames, 10 animation rows
+assets/favicon.svg   tab icon, a keycap
+assets/icon-180.png  the same icon for Apple home screens
+tests/               node, no dependencies
 ```
 
 The atlas rows are, in order: soldier idle/walk/attack/hurt/death, then orc

@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Key Quest</title>
 <meta name="description" content="A keyboard-learning game: find the glowing key, strike the enemy.">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="assets/icon-180.png" type="image/png" sizes="180x180">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<meta name="theme-color" content="#070E19">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -37,7 +41,10 @@
 
   <section id="viewMap">
     <div class="playBar">
-      <button class="playNow" id="playNow"><b id="playNowT">Play</b><small id="playNowS"></small></button>
+      <button class="playNow" id="playNow">
+        <span class="playGo">▶</span>
+        <span class="playTxt"><b id="playNowT">Play</b><small id="playNowS"></small></span>
+      </button>
       <button class="heroChip" id="heroChip" aria-label="Change fighter"></button>
     </div>
 

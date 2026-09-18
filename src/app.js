@@ -1,8 +1,9 @@
-const APP_VERSION='2.2.0';
+const APP_VERSION='2.3.0';
 /* The notes record which release they were written for, and a test fails a
    feature release that ships without rewriting them. Memory does not keep
    release notes current; a gate does. */
-const WHATS_NEW={for:'2.2.0',items:[
+const WHATS_NEW={for:'2.3.0',items:[
+ ['A calmer top of the screen','The Play bar is a dark panel now, with a small green Play mark, and your fighter stands on it rather than sitting in a box. The game has its own icon in the browser tab too.'],
  ['Your fighter is up top','Whoever you are playing as now stands in the Play bar. Tap them to swap.'],
  ['Straight into a mission','The big button at the top starts wherever you left off — one tap from opening the game to playing. The missions come first now, with the fighter and the drills below them.'],
  ['Thirty-six fighters','Twenty-four to buy, on a ladder that now runs to twenty thousand coins — and twelve more that no amount of coins will buy. Those open by clearing missions, mastering keys, typing fast, typing accurately, keeping a streak, meeting every enemy and fighting in every arena.'],
@@ -536,7 +537,7 @@ function drawHeroSummary(){
   box.innerHTML='';
   box.appendChild(spriteCanvas(f.base,f.tint,false));
   const w=document.createElement('span');w.className='who';
-  w.innerHTML='<b>'+f.name+'</b><small>change · '+owned+'/'+FIGHTERS.length+'</small>';
+  w.innerHTML='<b>'+f.name+'</b><small>change<i> · '+owned+'/'+FIGHTERS.length+'</i></small>';
   box.appendChild(w);
   box.title=f.name+' — '+f.note+'. Tap to change fighter.';
   box.onclick=openHero;
