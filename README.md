@@ -17,6 +17,9 @@ Built with Andy (age 7), whose idea this was.
 - **Stars and ranks** — three stars for a flawless mission, XP toward nine ranks
 - **Voice pack** — record your own voice for each letter; falls back to the
   browser's speech synthesis, which says "D. D for dog." for clarity
+- **Combat sound** — synthesised swing, impact and death effects, layered from
+  an oscillator sweep and a band-passed noise burst. No audio files. The
+  header's Sound button mutes them separately from the letter voice
 - **Free practice** — type any word or password and the keys light up for it
 
 ## Running it
