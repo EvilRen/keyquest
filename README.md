@@ -84,7 +84,14 @@ Progress, coins, per-key mastery and settings live in `localStorage` under
 `keyquest`.
 Recorded voice clips live in IndexedDB under `keyquest-voice`. Both are per-browser.
 
-## Credits
+## Licence and credits
 
-Character sprites: Tiny RPG Character Asset Pack 01 (Free Soldier & Orc).
-Check the pack's own licence file for attribution terms before publishing.
+Copyright (c) 2026 Benny Ankri. All rights reserved — see [LICENSE](LICENSE).
+
+Character sprites are from the **Tiny RPG Character Asset Pack 01 (Free Soldier
+& Orc)** and are *not* covered by that licence; they remain their author's
+property under the pack's own terms, and are credited in the game and here.
+Anyone reusing this project must obtain the pack from its author and comply
+with its licence separately.
+
+The Rubik typeface comes from Google Fonts under the SIL Open Font License.

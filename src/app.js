@@ -1,4 +1,16 @@
-const APP_VERSION='1.5.0';
+const APP_VERSION='1.6.0';
+/* The notes record which release they were written for, and a test fails a
+   feature release that ships without rewriting them. Memory does not keep
+   release notes current; a gate does. */
+const WHATS_NEW={for:'1.6.0',items:[
+ ['Ten places to fight','Missions now travel — a moonlit wood, a crystal cave, sun dunes, frost peaks, an orbit deck, ashfall and a keep hall, as well as the city. Fireflies drift, snow falls and embers rise.'],
+ ['Target practice','The game watches which keys you miss and how long you take to find them, then builds a drill out of your weakest ones. Progress shows a heat map of every key.'],
+ ['Daily missions and a streak','Three missions a day, a day streak, and achievements for the long haul.'],
+ ['Sound','Swings, hits and the moment a fighter goes down. The Sound button mutes them without silencing the letter voice.'],
+ ['Settings and your own voice','Every option is behind one button, and recording your voice is grouped by letters, numbers, symbols and keys with a search.'],
+ ['A mission fits one screen','No more scrolling to see the keyboard, and Shift is impossible to miss when you need it.']
+]};
+function minorOf(v){return String(v).split('.').slice(0,2).join('.');}
 function $(id){return document.getElementById(id);}
 
 /* ---------- atlas ---------- */
@@ -664,7 +676,7 @@ function drawVoicePack(){
 /* One sheet at a time. Opening the voice pack from Settings used to leave
    Settings open on top of it, where it swallowed every click. Closing the
    voice pack returns to where it was opened from. */
-const SHEETS=['vpSheet','setSheet','statSheet'];
+const SHEETS=['vpSheet','setSheet','statSheet','wnSheet'];
 function closeSheets(){SHEETS.forEach(id=>$(id).classList.add('hidden'));}
 function openVoice(){closeSheets();$('vpSheet').classList.remove('hidden');drawVoiceTabs();drawVoicePack();}
 function closeVoice(){$('vpSheet').classList.add('hidden');openSet();}
@@ -1174,6 +1186,16 @@ $('weakGo').onclick=()=>{
 };
 function openSet(){closeSheets();drawArenaSel();drawVoiceTabs();applySkin();$('setSheet').classList.remove('hidden');}
 function closeSet(){$('setSheet').classList.add('hidden');}
+function drawWN(){
+  $('wnVer').textContent='Version '+WHATS_NEW.for;
+  $('wnList').innerHTML=WHATS_NEW.items.map(([t,d])=>
+    '<div class="wn"><b>'+t+'</b><small>'+d+'</small></div>').join('');
+}
+function openWN(fromSet){closeSheets();drawWN();$('wnSheet').classList.remove('hidden');$('wnSheet').dataset.back=fromSet?'1':'';}
+function closeWN(){const back=$('wnSheet').dataset.back;$('wnSheet').classList.add('hidden');if(back)openSet();}
+$('wnOpen').onclick=()=>openWN(true);
+$('wnClose').onclick=closeWN;
+$('wnSheet').addEventListener('click',e=>{if(e.target===$('wnSheet'))closeWN();});
 $('vpOpen').onclick=openVoice;
 $('vpClose').onclick=closeVoice;
 $('vpSheet').addEventListener('click',e=>{if(e.target===$('vpSheet'))closeVoice();});
@@ -1187,6 +1209,7 @@ $('arenaSel').onchange=e=>{
   if(!$('viewPlay').classList.contains('hidden')){pickBiome();document.documentElement.dataset.skin=curBiome().theme;layoutScene();}
 };
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
+  if(!$('wnSheet').classList.contains('hidden'))return closeWN();
   if(!$('vpSheet').classList.contains('hidden'))return closeVoice();
   if(!$('setSheet').classList.contains('hidden'))closeSet();
   if(!$('statSheet').classList.contains('hidden'))closeStats();});
@@ -1214,5 +1237,11 @@ applySkin();drawPicker();drawMap();drawRank();drawWeak();loadClips();
    "is the deploy stuck, or is it my cache?" */
 touchStreak();checkProgress();
 $('verTag').textContent='v'+APP_VERSION;
-if(S.ver&&S.ver!==APP_VERSION)toast('Updated to v'+APP_VERSION);
+$('wnRow').textContent='added in v'+WHATS_NEW.for;
+/* A feature release earns the popup; a patch only gets the toast, so fixing a
+   typo does not interrupt a child who is trying to play. */
+if(S.ver&&S.ver!==APP_VERSION){
+  if(minorOf(S.ver)!==minorOf(APP_VERSION))openWN();
+  else toast('Updated to v'+APP_VERSION);
+}
 if(S.ver!==APP_VERSION){S.ver=APP_VERSION;save();}
