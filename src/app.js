@@ -1,8 +1,11 @@
-const APP_VERSION='2.3.0';
+const APP_VERSION='2.4.0';
 /* The notes record which release they were written for, and a test fails a
    feature release that ships without rewriting them. Memory does not keep
    release notes current; a gate does. */
-const WHATS_NEW={for:'2.3.0',items:[
+const WHATS_NEW={for:'2.4.0',items:[
+ ['Fourteen more missions','Thirty now. Double letters, one hand at a time, full stops and brackets, the tricky twins b d p q, place names, long sentences, an email and web round, strong passwords, and a final exam.'],
+ ['Six more places','A sunken reef, a sky temple, a scrapyard, a neon dojo, a hollow wood and the inside of a circuit board — sixteen arenas in all.'],
+ ['Ten more enemies and eleven more medals','Twenty foes to meet for the bestiary, twenty-two achievements, and two new ranks above Legend.'],
  ['A calmer top of the screen','The Play bar is a dark panel now, with a small green Play mark, and your fighter stands on it rather than sitting in a box. The game has its own icon in the browser tab too.'],
  ['Your fighter is up top','Whoever you are playing as now stands in the Play bar. Tap them to swap.'],
  ['Straight into a mission','The big button at the top starts wherever you left off — one tap from opening the game to playing. The missions come first now, with the fighter and the drills below them.'],
@@ -94,10 +97,21 @@ const BESTIARY=[
  {id:'sentry',  name:'Sentry',   base:'soldier',tint:'hue-rotate(200deg) saturate(1.3)'},
  {id:'warden',  name:'Warden',   base:'soldier',tint:'hue-rotate(-45deg) saturate(1.4)'},
  {id:'revenant',name:'Revenant', base:'soldier',tint:'hue-rotate(285deg) brightness(.85)'},
- {id:'overlord',name:'Overlord', base:'orc',    tint:'saturate(.2) brightness(1.35)'}
+ {id:'overlord',name:'Overlord', base:'orc',    tint:'saturate(.2) brightness(1.35)'},
+ {id:'wisp',    name:'Wisp',     base:'soldier',tint:'hue-rotate(165deg) brightness(1.3) saturate(.6)'},
+ {id:'gorge',   name:'Gorge',    base:'orc',    tint:'hue-rotate(-30deg) saturate(2.1)'},
+ {id:'thistle', name:'Thistle',  base:'soldier',tint:'hue-rotate(85deg) saturate(1.8)'},
+ {id:'cinderfoe',name:'Cinder',  base:'orc',    tint:'hue-rotate(-55deg) saturate(2.4) brightness(1.1)'},
+ {id:'mirefoe', name:'Mire',     base:'orc',    tint:'hue-rotate(75deg) saturate(.7) brightness(.8)'},
+ {id:'lancer',  name:'Lancer',   base:'soldier',tint:'hue-rotate(25deg) saturate(1.7)'},
+ {id:'hollow',  name:'Hollow',   base:'soldier',tint:'saturate(.1) brightness(.65) contrast(1.5)'},
+ {id:'seer',    name:'Seer',     base:'orc',    tint:'hue-rotate(260deg) saturate(1.6) brightness(1.15)'},
+ {id:'bulwark', name:'Bulwark',  base:'orc',    tint:'sepia(1) saturate(2.6) hue-rotate(-10deg)'},
+ {id:'nemesis', name:'Nemesis',  base:'soldier',tint:'hue-rotate(300deg) saturate(2.3) brightness(.85)'}
 ];
 const RANKS=[['Recruit',0],['Cadet',120],['Scout',300],['Sergeant',600],['Knight',1000],
-             ['Captain',1600],['Commander',2400],['Champion',3400],['Legend',5000]];
+             ['Captain',1600],['Commander',2400],['Champion',3400],['Legend',5000],
+             ['Grandmaster',7500],['Keymaster',11000]];
 
 /* ---------- keyboard model ---------- */
 const HE = {q:'/',w:"'",e:'ק',r:'ר',t:'א',y:'ט',u:'ו',i:'ן',o:'ם',p:'פ',
@@ -140,7 +154,21 @@ const LESSONS=[
  {n:'Sentences',s:'space + capitals',items:['I can type','I like to play','We go home','Dad is here']},
  {n:'Speed drill',s:'short and fast',items:['cat','dog','run','sun','fun','top','red','big','new','old']},
  {n:'Mixed bag',s:'letters and numbers',items:['level7','room12','bus99','key2026','game4']},
- {n:'Password power',s:'the real thing',items:['Dog123','Star!7','Sky_99','Tiger#4','Blue2026!']}
+ {n:'Password power',s:'the real thing',items:['Dog123','Star!7','Sky_99','Tiger#4','Blue2026!']},
+ {n:'Double trouble',s:'letters twice over',items:['letter','happy','coffee','little','summer','arrow','bubble']},
+ {n:'Left hand alone',s:'q to b',items:['sad','face','cart','desert','affect','grades','swear','wax']},
+ {n:'Right hand alone',s:'y to m',items:['you','pull','milk','hymn','puppy','opinion','noun','loop']},
+ {n:'Full stop',s:'. , ? !',items:['stop.','wait,','who?','go!','yes.','why?','now!','maybe,']},
+ {n:'Brackets',s:'( ) [ ] / \\',items:['(one)','[two]','a/b','x\\y','(go)','[up]','n/a','(ok)']},
+ {n:'Tricky twins',s:'b d p q m n',items:['bed','dad','pop','quid','mine','nomad','bump','dumb','pond']},
+ {n:'Name that place',s:'capitals and space',items:['Tel Aviv','New York','Cape Town','Rio','Oslo','Peru','Japan']},
+ {n:'Long sentences',s:'space, capitals, stops',items:['The cat sat down.','We can go now!','Is it your turn?','My room is clean.']},
+ {n:'Whole top row',s:'q to p',items:['type','write','power','quiet','report','piquet','outer','wiper']},
+ {n:'Whole bottom row',s:'z to m',items:['zoom','vex','climb','vanbz','mnzxc','bench','vozbc','cavm']},
+ {n:'Speed sprint',s:'three letters, fast',items:['cat','bat','rat','mat','hat','pat','sat','fat','vat','oat']},
+ {n:'Email and web',s:'@ . and /',items:['a@b.com','me@you.net','web.site','go/now','x@y.org','home.page']},
+ {n:'Strong passwords',s:'long and mixed',items:['River_88!','Moon#Cat7','Dragon$21','Quick%Fox9','Storm&Bee4']},
+ {n:'Everything',s:'the final exam',items:['Ready? Go!','Pass: Sky_7','A-Z and 0-9','Well done!','Key Quest 2026']}
 ];
 
 /* ---------- state ---------- */
@@ -359,6 +387,113 @@ const BIOMES=[
      px('#8E6A22',x,Math.round(HORIZON*.14),w,2);});
    bands([p.floor,'#2A2334','#312941']);
    D.tiles.forEach(([x,y,w])=>px(p.grid,x,y,w,1));
+   px(p.glow,0,HORIZON-1,CW,1);
+ }},
+
+{id:'reef',name:'Sunken reef',theme:'reef',
+ pal:{sky:'#06202E',ink:'#BFEFFF',glow:'#3FD0E0',floor:'#0B2A38',grid:'#1D5468',solid:'#08303F',lit:'#8FE8F5'},
+ paint(p,D,ts){
+   px(p.sky,0,0,CW,HORIZON);
+   px('#09293A',0,Math.round(HORIZON*.3),CW,Math.round(HORIZON*.7));
+   D.stars.forEach(([x,y],i)=>{const yy=HORIZON-Math.round(drift(y,HORIZON,ts,.006+i%3*.002));
+     px(p.lit,x,yy,1,1);if(i%3===0)px(p.glow,x+1,yy+1,1,1);});
+   D.trees.forEach(([x,h,w],i)=>{           /* kelp and coral fans */
+     const c=i%2?p.solid:'#0C3B4B';
+     for(let k=0;k<3;k++)px(c,x+Math.round(Math.sin(k+i)*2),HORIZON-h+k*Math.round(h/3),3,Math.round(h/3)+1);
+     if(i%3===0)for(let k=0;k<3;k++)px(p.glow,x-3+k*3,HORIZON-h-2,2,2);
+   });
+   bands([p.floor,'#0E3040','#123A4C']);
+   dots(D.ripples.map(([x,y])=>[x,y]),p.grid,2);
+   px(p.glow,0,HORIZON-1,CW,1);
+ }},
+
+{id:'temple',name:'Sky temple',theme:'temple',
+ pal:{sky:'#1B2440',ink:'#FFF0C9',glow:'#FFD98A',floor:'#2A2F4A',grid:'#4A5175',solid:'#E8DCC0',lit:'#FFFBEA'},
+ paint(p,D){
+   px(p.sky,0,0,CW,HORIZON);
+   px('#26304F',0,Math.round(HORIZON*.5),CW,Math.round(HORIZON*.5));
+   dots(D.stars,p.ink);
+   D.towers.forEach(([x,y,w],i)=>{          /* pillars with a capital */
+     const top=Math.round(HORIZON*.22);
+     px(p.solid,x+1,top,w-2,HORIZON-top);
+     px(p.lit,x-1,top,w+2,4);px(p.lit,x-1,HORIZON-5,w+2,4);
+     px(p.grid,x+Math.round(w/2)-1,top+5,1,HORIZON-top-11);
+   });
+   bands([p.floor,'#31375A','#383E66']);
+   D.tiles.forEach(([x,y,w])=>px(p.grid,x,y,w,1));
+   px(p.glow,0,HORIZON-1,CW,1);
+ }},
+
+{id:'junk',name:'Scrapyard',theme:'junk',
+ pal:{sky:'#2B2418',ink:'#FFE0A0',glow:'#C9A227',floor:'#2A2419',grid:'#5A4A22',solid:'#1A160E',lit:'#E8C24A'},
+ paint(p,D){
+   px(p.sky,0,0,CW,HORIZON);
+   px('#3A2F1D',0,Math.round(HORIZON*.55),CW,Math.round(HORIZON*.45));
+   D.dunes.forEach(([x,w,h],i)=>{           /* heaps of scrap, flecked with metal */
+     tri(x,HORIZON-h,w,h,p.solid);
+     for(let k=0;k<4;k++)px(p.lit,x+Math.round(w*(.3+k*.12)),HORIZON-Math.round(h*(.2+k*.15)),2,1);
+   });
+   D.rocks.forEach(([x,w,h],i)=>{if(i%2)px(p.grid,x,HORIZON-h,w,h);});
+   bands([p.floor,'#312A1D','#382F20']);
+   D.ripples.forEach(([x,y,w])=>px(p.grid,x,y,w,1));
+   px(p.glow,0,HORIZON-1,CW,1);
+ }},
+
+{id:'dojo',name:'Neon dojo',theme:'dojo',
+ pal:{sky:'#2A1220',ink:'#FFD7E0',glow:'#FF5C8A',floor:'#3A2118',grid:'#6E3A28',solid:'#1B0C15',lit:'#FFE8B0'},
+ paint(p,D){
+   px(p.sky,0,0,CW,HORIZON);
+   for(let x=0;x<CW;x+=26){               /* paper screens */
+     px('#F2E4D0',x+2,Math.round(HORIZON*.18),22,Math.round(HORIZON*.62));
+     px(p.solid,x+2,Math.round(HORIZON*.18),22,2);
+     px(p.solid,x+12,Math.round(HORIZON*.18),2,Math.round(HORIZON*.62));
+     px(p.solid,x+2,Math.round(HORIZON*.5),22,2);
+   }
+   D.banners.forEach(([x],i)=>{if(i%2)return;   /* hanging lanterns */
+     const y=Math.round(HORIZON*.1);
+     px(p.grid,x+3,0,1,y);disc(x+3,y+5,5,p.glow);px(p.lit,x+1,y+4,5,2);
+   });
+   bands([p.floor,'#43261C','#4C2C20']);
+   for(let x=0;x<CW;x+=18)px(p.grid,x,HORIZON,1,CH-HORIZON);
+   px(p.glow,0,HORIZON-1,CW,1);
+ }},
+
+{id:'haunt',name:'Hollow wood',theme:'haunt',
+ pal:{sky:'#0E1218',ink:'#9FE8C0',glow:'#57D9A8',floor:'#121A1C',grid:'#263A34',solid:'#070B0D',lit:'#CFF7E2'},
+ paint(p,D,ts){
+   px(p.sky,0,0,CW,HORIZON);
+   D.trees.forEach(([x,h,w],i)=>{          /* bare trunks and crooked limbs */
+     const top=HORIZON-h;
+     px(p.solid,x+Math.round(w/2)-1,top,3,h);
+     for(let k=0;k<3;k++){
+       const yy=top+Math.round(h*(.15+k*.2)),len=Math.round(w*(.5-k*.1))*(k%2?-1:1);
+       px(p.solid,x+Math.round(w/2)+(len<0?len:0),yy,Math.abs(len),2);
+     }
+   });
+   px('#16211F',0,Math.round(HORIZON*.78),CW,Math.round(HORIZON*.22));   /* fog */
+   D.flies.forEach(([x,y],i)=>{const yy=HORIZON-8-Math.round(drift(y,30,ts,.003+i%3*.001));
+     px(p.glow,x,yy,1,1);px(p.lit,x,yy-1,1,1);});
+   bands([p.floor,'#15201F','#182523']);
+   D.tufts.forEach(([x,y])=>px(p.grid,x,y,2,1));
+   px(p.glow,0,HORIZON-1,CW,1);
+ }},
+
+{id:'circuit',name:'Circuit board',theme:'circuit',
+ pal:{sky:'#04140E',ink:'#7CFFB0',glow:'#2BE07A',floor:'#072016',grid:'#12503A',solid:'#0A2C20',lit:'#C9FFDF'},
+ paint(p,D,ts){
+   px(p.sky,0,0,CW,HORIZON);
+   for(let y=8;y<HORIZON;y+=13){          /* traces that turn a corner */
+     px(p.grid,0,y,CW,1);
+     for(let x=14;x<CW;x+=52)px(p.grid,x,y-6,1,7);
+   }
+   D.panels.forEach(([x,y,w,h],i)=>{      /* chips soldered to the board */
+     const cy=Math.round(HORIZON*.3)+((i%2)*Math.round(HORIZON*.3));
+     px(p.solid,x,cy,w,12);px(p.grid,x,cy,w,1);
+     for(let k=2;k<w-2;k+=5){px(p.lit,x+k,cy-2,2,2);px(p.lit,x+k,cy+12,2,2);}
+   });
+   D.stars.forEach(([x,y],i)=>px(i%2?p.ink:p.glow,x,y,1,1));
+   bands([p.floor,'#0A2A1E','#0D3325']);
+   neonGrid(p.grid);
    px(p.glow,0,HORIZON-1,CW,1);
  }},
 
@@ -1279,7 +1414,18 @@ const ACH=[
  {id:'stars', t:'Every star collected',       ok:d=>d.stars>=LESSONS.length*3},
  {id:'s3',    t:'Three days in a row',        ok:d=>(S.bestStreak||0)>=3},
  {id:'s7',    t:'Seven days in a row',        ok:d=>(S.bestStreak||0)>=7},
- {id:'tour',  t:'Fought in every arena',      ok:d=>Object.keys(S.seenArena||{}).length>=BIOMES.length}
+ {id:'tour',  t:'Fought in every arena',      ok:d=>Object.keys(S.seenArena||{}).length>=BIOMES.length},
+ {id:'half',  t:'Half the missions cleared',  ok:d=>d.cleared>=Math.ceil(LESSONS.length/2)},
+ {id:'k5000', t:'5,000 keys hit',             ok:d=>d.hits>=5000},
+ {id:'k25000',t:'25,000 keys hit',            ok:d=>d.hits>=25000},
+ {id:'m30',   t:'30 keys mastered',           ok:d=>d.mastered>=30},
+ {id:'mall',  t:'Every key mastered',         ok:d=>d.mastered>=DRILLABLE().length},
+ {id:'fast',  t:'Under a second a key',       ok:d=>d.hits>=200&&d.avg>0&&d.avg<1000},
+ {id:'faster',t:'Under 0.7s a key',           ok:d=>d.hits>=500&&d.avg>0&&d.avg<700},
+ {id:'acc99', t:'99% accuracy over 1,000 keys',ok:d=>d.hits>=1000&&d.acc>=99},
+ {id:'homerow',t:'Home row without a miss',   ok:d=>[...'asdfjkl'].every(c=>{const r=S.keys[c];return r&&r.h>=15&&r.m===0;})},
+ {id:'s14',   t:'Fourteen days in a row',     ok:d=>(S.bestStreak||0)>=14},
+ {id:'rich',  t:'Ten thousand coins earned',  ok:d=>(S.xp||0)>=10000}
 ];
 function checkProgress(){
   const t=today(),d=summary();
