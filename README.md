@@ -4,7 +4,7 @@ A keyboard-learning game for kids. A word appears, the matching key glows on an
 on-screen keyboard that carries both English and Hebrew legends, and pressing the
 right key makes your fighter strike. Press the wrong one and the enemy strikes back.
 
-Built with Andy (age 7), whose idea this was.
+Built with my seven-year-old, whose idea this was.
 
 ## What's in it
 
@@ -34,6 +34,19 @@ python3 -m http.server 8000
 
 Opening `index.html` directly from the filesystem works too, though some browsers
 restrict microphone access there — use the local server for the voice pack.
+
+## Tests
+
+No dependencies:
+
+```bash
+node tests/test-content.js
+```
+
+It loads the real `src/app.js` and compares every pair of lists that must
+agree — lesson characters against the keyboard, against what the voice can
+say, against the voice-pack tiles; sprites, shop items and defaults against
+the tables they point into. See `tests/README.md`.
 
 ## Deploying
 

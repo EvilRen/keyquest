@@ -50,7 +50,13 @@ const ROWS = [
 ];
 const SHIFTED = {'!':'1','@':'2','#':'3','$':'4','%':'5','^':'6','&':'7','*':'8','(':'9',')':'0','_':'-','+':'=',
 '?':'/','"':"'",':':';','<':',','>':'.','{':'[','}':']','|':'\\','~':'`'};
-const NAMES={' ':'space','Enter':'enter','Shift':'shift','CapsLock':'caps lock','Backspace':'backspace','Tab':'tab'};
+const NAMES={' ':'space','Enter':'enter','Shift':'shift','CapsLock':'caps lock','Backspace':'backspace','Tab':'tab',
+'!':'exclamation mark','?':'question mark','@':'at sign','#':'hash','$':'dollar sign','%':'percent',
+'^':'caret','&':'and sign','*':'star','(':'open bracket',')':'close bracket','_':'underscore','-':'dash',
+'+':'plus','=':'equals','[':'open square bracket',']':'close square bracket','{':'open curly bracket',
+'}':'close curly bracket',';':'semicolon',':':'colon',"'":'apostrophe','"':'quote mark',',':'comma',
+'.':'full stop','/':'slash','\\':'backslash','|':'pipe','<':'less than','>':'greater than',
+'~':'tilde','`':'back tick'};
 
 /* ---------- missions ---------- */
 const LESSONS=[
@@ -62,18 +68,18 @@ const LESSONS=[
  {n:'Low row',s:'z x c v b n m',items:['c','v','b','n','m','z','x','van','cab','mix']},
  {n:'Missing pieces',s:'q w p y g h',items:['happy','queen','group','why','yoga','giant','puppy']},
  {n:'Space bar',s:'two words',items:['big dog','my cat','we can go','red bus','a good day']},
- {n:'Capitals',s:'hold Shift',items:['Andy','Dad','Leni','Sunday','Israel','Ramat Gan']},
+ {n:'Capitals',s:'hold Shift',items:['Apple','Dad','Leni','Sunday','Israel','Ramat Gan']},
  {n:'Number row',s:'1 to 0',items:['1','4','7','0','2026','365','19','800']},
  {n:'Long words',s:'whole alphabet',items:['keyboard','computer','elephant','birthday','dinosaur','football']},
  {n:'Symbols',s:'Shift + numbers',items:['!','?','@','#','$','%','&','*']},
- {n:'Sentences',s:'space + capitals',items:['I can type','My name is Andy','We go home','Dad is here']},
+ {n:'Sentences',s:'space + capitals',items:['I can type','I like to play','We go home','Dad is here']},
  {n:'Speed drill',s:'short and fast',items:['cat','dog','run','sun','fun','top','red','big','new','old']},
  {n:'Mixed bag',s:'letters and numbers',items:['level7','room12','bus99','key2026','game4']},
- {n:'Password power',s:'the real thing',items:['Dog123','Andy!7','Sky_99','Tiger#4','Blue2026!']}
+ {n:'Password power',s:'the real thing',items:['Dog123','Star!7','Sky_99','Tiger#4','Blue2026!']}
 ];
 
 /* ---------- state ---------- */
-const DEF={coins:0,xp:0,best:{},stars:{},owned:['core','cadet'],buddy:'',voice:1,sfx:1,heb:1,skin:'core',voiceName:'',hero:'cadet'};
+const DEF={coins:0,xp:0,best:{},stars:{},owned:['core','cadet'],buddy:'',voice:1,sfx:1,heb:1,skin:'core',voiceName:'',voicePick:0,hero:'cadet'};
 let S=Object.assign({},DEF);
 try{const raw=localStorage.getItem('keyquest');if(raw)S=Object.assign({},DEF,JSON.parse(raw));}catch(e){}
 /* migrate older saves */
@@ -231,6 +237,10 @@ function drawRank(){
 }
 
 /* ---------- voice ---------- */
+/* The natural voices are worth hunting for: the legacy ones read a single
+   letter flat and run two phrases together. */
+const GOOD_VOICE=/natural|online|google|samantha|aria|jenny|guy|eric|emma|ava|siri/i;
+const POOR_VOICE=/zira|david|mark|hazel|george|susan|linda|richard|sam\b/i;
 let voices=[];
 function loadVoices(){
   if(!window.speechSynthesis)return;
@@ -238,25 +248,49 @@ function loadVoices(){
   const sel=$('voiceSel');sel.innerHTML='';
   if(!voices.length){sel.classList.add('hidden');return;}
   sel.classList.remove('hidden');
+  voices.sort((a,b)=>(GOOD_VOICE.test(b.name)?1:0)-(GOOD_VOICE.test(a.name)?1:0));
   voices.forEach(v=>{
     const o=document.createElement('option');o.value=v.name;
-    o.textContent=v.name.replace(/(Microsoft|Google|Apple)\s*/,'').slice(0,22);
+    o.textContent=(GOOD_VOICE.test(v.name)?'★ ':'')+
+      v.name.replace(/(Microsoft|Google|Apple)\s*/,'').replace(/\s*Online\s*\(Natural\)/i,'').slice(0,22);
     sel.appendChild(o);
   });
-  const prefer=S.voiceName||(voices.find(v=>/natural|google|samantha|aria|jenny/i.test(v.name))||voices[0]).name;
+  /* A voice saved before this list existed wins forever otherwise: the old code
+     only consulted the preference when nothing was stored, so a first visit that
+     landed on a robotic legacy voice kept it for good. Re-pick unless the choice
+     was made by hand. */
+  const best=voices.find(v=>GOOD_VOICE.test(v.name));
+  const saved=voices.find(v=>v.name===S.voiceName);
+  const keep=saved&&(S.voicePick||!POOR_VOICE.test(saved.name)||!best);
+  const prefer=keep?saved.name:(best||voices[0]).name;
   sel.value=prefer;S.voiceName=sel.value;save();
 }
 if(window.speechSynthesis){speechSynthesis.onvoiceschanged=loadVoices;setTimeout(loadVoices,80);}
-function speak(t){
+function utter(t,rate){
+  const u=new SpeechSynthesisUtterance(t);
+  u.rate=rate||.8;u.pitch=1.05;u.lang='en-US';
+  const v=voices.find(x=>x.name===S.voiceName);if(v)u.voice=v;
+  return u;
+}
+/* Phrases are spoken one at a time with a gap between them. Putting them in a
+   single utterance ran them together — "F. F for fish." came out as "ff". */
+function speakParts(parts,gap){
   if(!S.voice||!window.speechSynthesis)return;
   try{
     speechSynthesis.cancel();
-    const u=new SpeechSynthesisUtterance(t);
-    u.rate=.75;u.pitch=1.05;u.lang='en-US';
-    const v=voices.find(x=>x.name===S.voiceName);if(v)u.voice=v;
-    speechSynthesis.speak(u);
+    let i=0;
+    const next=()=>{
+      if(i>=parts.length)return;
+      const p=parts[i++];
+      const u=utter(p.t,p.rate);
+      u.onend=()=>setTimeout(next,p.gap||gap||240);
+      u.onerror=()=>setTimeout(next,60);
+      speechSynthesis.speak(u);
+    };
+    next();
   }catch(e){}
 }
+function speak(t){speakParts([{t:t}]);}
 const LW={a:'apple',b:'ball',c:'cat',d:'dog',e:'egg',f:'fish',g:'goat',h:'hat',i:'igloo',j:'jam',
 k:'kite',l:'lion',m:'moon',n:'nest',o:'orange',p:'pen',q:'queen',r:'rain',s:'sun',t:'tree',
 u:'umbrella',v:'van',w:'water',x:'box',y:'yoyo',z:'zebra'};
@@ -264,7 +298,9 @@ function sayTarget(w){
   if(w.length===1){
     const c=w.toLowerCase();
     if(playClip(c))return;
-    if(/[a-z]/.test(c))speak(c.toUpperCase()+'. '+c.toUpperCase()+' for '+LW[c]+'.');
+    if(/[a-z]/.test(c))speakParts([
+      {t:c.toUpperCase()+'.',rate:.65,gap:420},
+      {t:c.toUpperCase()+' for '+LW[c]+'.',rate:.8}]);
     else if(/[0-9]/.test(c))speak('number '+c);
     else speak(NAMES[c]||c);
   }else{
@@ -305,8 +341,18 @@ function playClip(tok){
   if(!u)return false;
   try{if(window.speechSynthesis)speechSynthesis.cancel();const a=new Audio(u);a.play();return true;}catch(e){return false;}
 }
-const VTOKENS=['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
-'0','1','2','3','4','5','6','7','8','9','space','enter','shift','backspace'];
+/* Derived, never hand-kept: a symbol a lesson can ask for always gets a tile to record.
+   The old hand-written list omitted every symbol, so the Symbols mission had no voice. */
+const VTOKENS=(()=>{
+  const t=[...'abcdefghijklmnopqrstuvwxyz','0','1','2','3','4','5','6','7','8','9'];
+  const seen=new Set(t);
+  LESSONS.forEach(L=>L.items.forEach(it=>[...it].forEach(ch=>{
+    const c=ch.toLowerCase();
+    if(c===' '||/[a-z0-9]/.test(c)||seen.has(c))return;
+    seen.add(c);t.push(c);
+  })));
+  return t.concat(['space','enter','shift','backspace']);
+})();
 function vlabel(t){return t.length===1?t.toUpperCase():t;}
 async function recordInto(tok,tile){
   if(recTok)return;
@@ -450,6 +496,7 @@ function start(lesson,list,isCustom,index){
   hero.base=f.base;hero.tint=f.tint;hero.alpha=1;
   $('viewMap').classList.add('hidden');$('viewShop').classList.add('hidden');
   $('viewPlay').classList.remove('hidden');$('backBtn').classList.remove('hidden');
+  document.body.classList.add('playing');
   startLoop();newFoe();render();
 }
 function newFoe(){
@@ -591,6 +638,7 @@ function toMap(){
   stopLoop();
   $('viewPlay').classList.add('hidden');$('viewShop').classList.add('hidden');
   $('viewMap').classList.remove('hidden');$('backBtn').classList.add('hidden');
+  document.body.classList.remove('playing');
   drawPicker();drawMap();drawRank();
 }
 function drawMap(){
@@ -641,13 +689,14 @@ function applySkin(){
 $('soundBtn').onclick=()=>{S.voice=S.voice?0:1;save();applySkin();};
 $('sfxBtn').onclick=()=>{S.sfx=S.sfx?0:1;save();applySkin();if(S.sfx)sfx('swing');};
 $('hebBtn').onclick=()=>{S.heb=S.heb?0:1;save();applySkin();};
-$('voiceSel').onchange=e=>{S.voiceName=e.target.value;save();speak('Hello Andy, ready to play?');};
+$('voiceSel').onchange=e=>{S.voiceName=e.target.value;S.voicePick=1;save();speak('Hello, ready to play?');};
 $('backBtn').onclick=toMap;
 $('coinBtn').onclick=()=>{
   if($('viewShop').classList.contains('hidden')){
     stopLoop();
     $('viewMap').classList.add('hidden');$('viewPlay').classList.add('hidden');
-    $('viewShop').classList.remove('hidden');$('backBtn').classList.remove('hidden');drawShop();
+    $('viewShop').classList.remove('hidden');$('backBtn').classList.remove('hidden');
+    document.body.classList.remove('playing');drawShop();
   }else toMap();
 };
 $('sayBtn').onclick=()=>sayTarget(items[ix]||'');

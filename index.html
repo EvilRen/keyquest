@@ -14,7 +14,17 @@
 <div class="wrap">
   <div class="bar">
     <div class="logo">KEY<span>QUEST</span></div>
-    <button class="pill coins" id="coinBtn"><span class="coin-dot"></span><span id="coinN">0</span></button>
+    <button class="pill coins" id="coinBtn" title="Your coins — tap to open the supply store">
+      <svg class="coin" viewBox="0 0 24 24" aria-hidden="true">
+        <defs><radialGradient id="coinFace" cx="34%" cy="28%" r="78%">
+          <stop offset="0%" stop-color="#FFF0BC"/><stop offset="52%" stop-color="#FFC24A"/>
+          <stop offset="100%" stop-color="#B9740E"/></radialGradient></defs>
+        <circle cx="12" cy="12" r="10.4" fill="url(#coinFace)" stroke="#7A4E08" stroke-width="1.5"/>
+        <circle cx="12" cy="12" r="7.1" fill="none" stroke="#E9A82E" stroke-width="1.1" opacity=".85"/>
+        <path d="M7.6 8.1A6.6 6.6 0 0 1 11.6 5" fill="none" stroke="#FFF8E2" stroke-width="1.7"
+              stroke-linecap="round" opacity=".9"/>
+      </svg>
+      <span id="coinN">0</span><span class="shoptag">Shop</span></button>
     <select class="pill" id="voiceSel" title="Pick a voice"></select>
     <button class="pill" id="soundBtn">Voice on</button>
     <button class="pill" id="sfxBtn">Sound on</button>
