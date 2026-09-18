@@ -106,8 +106,47 @@ function fighter(id){return FIGHTERS.find(f=>f.id===id)||FIGHTERS[0];}
 /* ---------- scene ---------- */
 const cv=$('scene'),cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
-const CW=300,CH=112,GROUND=104,HORIZON=80;
-const HERO_HOME=50, FOE_HOME=148, DRAW_Y=GROUND-FH*SC+2;
+/* The scene is drawn to fit its box rather than to a fixed 300x112. A fixed
+   resolution can only ever fill one axis, so the arena sat as a letterboxed
+   island in a much wider panel. The zoom is chosen so a fighter is always
+   about the same share of the height, and the width then buys environment. */
+let CW=300,CH=112,GROUND=104,HORIZON=80;
+let HERO_HOME=50,FOE_HOME=148,DRAW_Y=GROUND-FH*SC+2;
+let STARS=[],TOWERS=[];
+const PAIR_GAP=98;              /* the distance between the two fighters */
+function rnd(seed){let t=seed+0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);
+  return ((t^t>>>14)>>>0)/4294967296;}
+function layoutScene(){
+  const r=cv.getBoundingClientRect();
+  const bw=r.width||300,bh=r.height||112;
+  /* Zoom is chosen, then BOTH dimensions follow from it, so the canvas always
+     carries the box's aspect ratio and nothing letterboxes. Deriving width and
+     height from separate rules is the classic layout bug: at some viewport they
+     disagree and the scene comes out the wrong shape. */
+  const SCENE_MIN_W=PAIR_GAP+FW*SC+10;          /* both fighters must fit */
+  const lo=Math.max(bw/1200,bh/420),hi=Math.min(bw/SCENE_MIN_W,bh/100);
+  const Z=Math.max(lo,Math.min(hi,bh/140));     /* display pixels per scene pixel */
+  CW=Math.round(bw/Z);CH=Math.round(bh/Z);
+  if(cv.width!==CW||cv.height!==CH){cv.width=CW;cv.height=CH;}
+  cx.imageSmoothingEnabled=false;
+  GROUND=Math.round(CH*.929);
+  HORIZON=Math.round(CH*.714);
+  DRAW_Y=GROUND-FH*SC+2;
+  HERO_HOME=Math.round(CW/2-PAIR_GAP/2-FW*SC/2);
+  FOE_HOME=HERO_HOME+PAIR_GAP;
+  buildSky();
+}
+function buildSky(){
+  STARS=[];
+  const n=Math.round(CW*HORIZON/2800);
+  for(let i=0;i<n;i++)STARS.push([Math.round(rnd(i*7+1)*(CW-2)),Math.round(rnd(i*13+5)*(HORIZON-6))+2]);
+  TOWERS=[];
+  const step=18,m=Math.floor(CW/step);
+  for(let i=0;i<m;i++){
+    const x=i*step+2,h=Math.round((.28+rnd(i*31+3)*.34)*HORIZON);
+    TOWERS.push([x,HORIZON-h]);
+  }
+}
 let hero={base:'soldier',x:-70,anim:'idle',t0:0,alpha:1,tint:'none'};
 let foe ={base:'orc',    x:360,anim:'idle',t0:0,alpha:1,tint:'none'};
 let lives=3,maxLives=3,running=false;
@@ -117,14 +156,13 @@ const ARENA={
  ember:{sky:'#150810',star:'#FFC58A',glow:'#FF7A45',floor:'#1A0A10',grid:'#5A2A1E',tower:'#24101A',win:'#FF9A3C'},
  void :{sky:'#0A0618',star:'#C9A6FF',glow:'#A97BFF',floor:'#120B22',grid:'#3A2660',tower:'#180F2E',win:'#C08CFF'}
 };
-const STARS=[[18,12],[46,26],[78,9],[112,20],[140,7],[168,24],[196,14],[228,28],[256,11],[284,22],[62,17],[210,6]];
 function px(c,x,y,w,h){cx.fillStyle=c;cx.fillRect(x,y,w,h);}
 function drawArena(){
   const p=ARENA[S.skin]||ARENA.core;
   px(p.sky,0,0,CW,HORIZON);
   p_stars(p);
   /* skyline */
-  [[20,52],[40,44],[58,56],[236,50],[256,42],[276,54]].forEach(([x,y])=>{
+  TOWERS.forEach(([x,y])=>{
     px(p.tower,x,y,14,HORIZON-y);
     for(let wy=y+4;wy<HORIZON-4;wy+=7)px(p.win,x+4,wy,2,2);
   });
@@ -132,8 +170,12 @@ function drawArena(){
   px(p.floor,0,HORIZON,CW,CH-HORIZON);
   cx.strokeStyle=p.grid;cx.lineWidth=1;
   cx.beginPath();
-  for(let i=-6;i<=6;i++){cx.moveTo(CW/2+i*10,HORIZON+.5);cx.lineTo(CW/2+i*74,CH);}
-  [84,89,95,103,CH-1].forEach(y=>{cx.moveTo(0,y+.5);cx.lineTo(CW,y+.5);});
+  const span=Math.ceil(CW/44),deep=CH-HORIZON;
+  for(let i=-span;i<=span;i++){cx.moveTo(CW/2+i*10,HORIZON+.5);cx.lineTo(CW/2+i*74,CH);}
+  [.125,.28,.47,.72,1].forEach(f=>{
+    const y=Math.round(HORIZON+deep*f)-(f===1?1:0);
+    cx.moveTo(0,y+.5);cx.lineTo(CW,y+.5);
+  });
   cx.stroke();
   px(p.glow,0,HORIZON-1,CW,1);
 }
@@ -189,6 +231,8 @@ function loop(ts){
   requestAnimationFrame(loop);
 }
 function startLoop(){if(!running){running=true;requestAnimationFrame(loop);}}
+/* Registered once at startup, not from whatever happens to run next. */
+window.addEventListener('resize',()=>{if(!$('viewPlay').classList.contains('hidden'))layoutScene();});
 function stopLoop(){running=false;}
 
 /* ---------- roster ---------- */
@@ -380,7 +424,8 @@ function drawVoicePack(){
     const has=clips.has(tok);
     const t=document.createElement('div');
     t.className='vtile'+(has?' has':'');
-    t.innerHTML='<b>'+vlabel(tok)+'</b><small>'+(has?'yours':'record')+'</small>';
+    t.innerHTML='<b'+(tok.length>1?' class="word"':'')+'>'+vlabel(tok)+'</b>'+
+      '<small>'+(has?'yours':'record')+'</small>';
     t.addEventListener('click',()=>{ if(has)playClip(tok); else recordInto(tok,t); });
     if(has){
       const re=document.createElement('button');
@@ -497,6 +542,8 @@ function start(lesson,list,isCustom,index){
   $('viewMap').classList.add('hidden');$('viewShop').classList.add('hidden');
   $('viewPlay').classList.remove('hidden');$('backBtn').classList.remove('hidden');
   document.body.classList.add('playing');
+  $('hebBtn').classList.remove('hidden');
+  layoutScene();
   startLoop();newFoe();render();
 }
 function newFoe(){
@@ -638,6 +685,7 @@ function toMap(){
   stopLoop();
   $('viewPlay').classList.add('hidden');$('viewShop').classList.add('hidden');
   $('viewMap').classList.remove('hidden');$('backBtn').classList.add('hidden');
+  $('hebBtn').classList.add('hidden');
   document.body.classList.remove('playing');
   drawPicker();drawMap();drawRank();
 }
@@ -683,7 +731,7 @@ function applySkin(){
   document.body.classList.toggle('hide-he',!S.heb);
   $('soundBtn').textContent=S.voice?'Voice on':'Voice off';
   $('sfxBtn').textContent=S.sfx?'Sound on':'Sound off';
-  $('hebBtn').textContent=S.heb?'א Hebrew on':'א Hebrew off';
+  $('hebBtn').textContent=S.heb?'א Hebrew keys on':'א Hebrew keys off';
   $('coinN').textContent=S.coins;
 }
 $('soundBtn').onclick=()=>{S.voice=S.voice?0:1;save();applySkin();};
@@ -696,6 +744,7 @@ $('coinBtn').onclick=()=>{
     stopLoop();
     $('viewMap').classList.add('hidden');$('viewPlay').classList.add('hidden');
     $('viewShop').classList.remove('hidden');$('backBtn').classList.remove('hidden');
+    $('hebBtn').classList.add('hidden');
     document.body.classList.remove('playing');drawShop();
   }else toMap();
 };
