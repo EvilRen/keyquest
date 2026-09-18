@@ -58,7 +58,8 @@
 
   <section id="viewPlay" class="hidden">
     <div class="stage">
-      <div class="arena"><canvas id="scene" width="300" height="112"></canvas></div>
+      <div class="arena"><canvas id="scene" width="300" height="112"></canvas>
+        <div class="foeName" id="foeName"></div></div>
       <div class="word" id="word"></div>
       <div class="hint" id="hint"></div>
       <div class="progress"><div id="bar"></div></div>
@@ -75,6 +76,24 @@
     <p class="lede">Spend coins on a companion or a new arena colour.</p>
     <div class="shop" id="shopGrid"></div>
   </section>
+</div>
+<div class="sheet hidden" id="heroSheet">
+  <div class="sheetBox wide-sheet" role="dialog" aria-modal="true" aria-labelledby="heroTitle">
+    <h3 id="heroTitle">Choose your fighter</h3>
+    <div class="tabs" id="heroTabs"></div>
+    <div class="row tight"><input type="text" id="heroFilter" placeholder="Find a fighter" autocomplete="off" spellcheck="false"></div>
+    <div class="picker" id="heroGrid"></div>
+    <button class="pill wide" id="heroClose">Done</button>
+  </div>
+</div>
+<div class="sheet hidden" id="bestSheet">
+  <div class="sheetBox wide-sheet" role="dialog" aria-modal="true" aria-labelledby="bestTitle">
+    <h3 id="bestTitle">Bestiary</h3>
+    <p class="wnver" id="bestCount"></p>
+    <p class="lede sm">Every enemy you have fought. The ones you have not met yet are shadows — get further into the missions and they will show themselves.</p>
+    <div class="bestGrid" id="bestGrid"></div>
+    <button class="pill wide" id="bestClose">Done</button>
+  </div>
 </div>
 <div class="sheet hidden" id="wnSheet">
   <div class="sheetBox" role="dialog" aria-modal="true" aria-labelledby="wnTitle">
@@ -104,6 +123,8 @@
     <div class="figs" id="statFigs"></div>
     <h4 class="subh">Today</h4>
     <div id="statDay"></div>
+    <div class="srow"><span>Bestiary<small id="bestRow">enemies you have fought</small></span>
+      <button class="pill" id="bestOpen">Open</button></div>
     <h4 class="subh">Achievements</h4>
     <div id="statAch" class="achs"></div>
     <h4 class="subh">Every key, how well you know it</h4>

@@ -12,8 +12,11 @@ Built with my seven-year-old, whose idea this was.
   number row, symbols, long words, sentences, speed drills, passwords
 - **Dual-legend keyboard** — English and Hebrew on every keycap, matching a
   physical Israeli keyboard. Hebrew legends toggle off in the header
-- **6 playable fighters** with different hearts and coin rates, unlocked with coins
-- **10 named enemies** that appear as the missions get harder
+- **6 playable fighters** with different hearts and coin rates, unlocked with
+  coins. The menu shows the one you are using; the full roster is a sheet with
+  tabs and a search, so the menu is the same height at six fighters or sixty
+- **10 named enemies** that appear as the missions get harder, recorded in a
+  bestiary — the ones you have not met yet are shadows
 - **Stars and ranks** — three stars for a flawless mission, XP toward nine ranks
 - **Voice pack** — record your own voice for each key, in Settings → Your own
   voice. Grouped into Letters / Numbers / Symbols / Keys with a filter and a

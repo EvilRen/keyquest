@@ -75,6 +75,20 @@ ok('every fighter points at a sprite row that exists',
    'bad: '+JSON.stringify(T.FIGHTERS.filter(f=>!T.BASE[f.base]).map(f=>f.id)));
 ok('every enemy points at a sprite row that exists',
    T.BESTIARY.every(f=>T.BASE[f.base]));
+/* The album keys on id and shows name; deriving one from the other would put
+   the two out of step the first time an enemy is renamed. */
+ok('every enemy has a stable id and a name',
+   T.BESTIARY.every(e=>e.id&&e.name),
+   'incomplete: '+JSON.stringify(T.BESTIARY.filter(e=>!(e.id&&e.name)).map(e=>e.name||e.id)));
+ok('no two enemies share an id',new Set(T.BESTIARY.map(e=>e.id)).size===T.BESTIARY.length);
+ok('no two enemies share a name',new Set(T.BESTIARY.map(e=>e.name)).size===T.BESTIARY.length);
+/* Missions widen the pool by index; an enemy past the last mission's reach
+   could never be met, and its album slot would stay a shadow forever. */
+ok('every enemy is reachable by some mission',(()=>{
+  const widest=Math.max(3,Math.min(T.BESTIARY.length,(T.LESSONS.length-1)+3));
+  return widest>=T.BESTIARY.length;
+})(),'the pool only ever reaches '+Math.max(3,Math.min(T.BESTIARY.length,(T.LESSONS.length-1)+3))+
+   ' of '+T.BESTIARY.length+' enemies');
 const biome=id=>T.BIOMES.find(b=>b.id===id);
 ok('every shop arena skin is a real environment',
    T.SHOP.filter(s=>s.type==='skin').every(s=>biome(s.id)),

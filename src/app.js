@@ -1,8 +1,10 @@
-const APP_VERSION='1.6.0';
+const APP_VERSION='1.7.0';
 /* The notes record which release they were written for, and a test fails a
    feature release that ships without rewriting them. Memory does not keep
    release notes current; a gate does. */
-const WHATS_NEW={for:'1.6.0',items:[
+const WHATS_NEW={for:'1.7.0',items:[
+ ['A bestiary','Every enemy you fight is recorded. The ones you have not met are shadows — open it from Progress.'],
+ ['A roster that fits','The menu shows the fighter you are using; Change fighter opens the full roster with tabs and a search, so the menu stays the same height however many fighters there are.'],
  ['Ten places to fight','Missions now travel — a moonlit wood, a crystal cave, sun dunes, frost peaks, an orbit deck, ashfall and a keep hall, as well as the city. Fireflies drift, snow falls and embers rise.'],
  ['Target practice','The game watches which keys you miss and how long you take to find them, then builds a drill out of your weakest ones. Progress shows a heat map of every key.'],
  ['Daily missions and a streak','Three missions a day, a day streak, and achievements for the long haul.'],
@@ -33,16 +35,16 @@ const FIGHTERS=[
 ];
 /* bestiary — unlocks as the missions get harder */
 const BESTIARY=[
- {name:'Scout',    base:'orc',    tint:'none'},
- {name:'Runner',   base:'orc',    tint:'hue-rotate(150deg)'},
- {name:'Brute',    base:'orc',    tint:'hue-rotate(-70deg) saturate(1.5)'},
- {name:'Shade',    base:'orc',    tint:'hue-rotate(230deg) brightness(.85)'},
- {name:'Sunspawn', base:'orc',    tint:'hue-rotate(60deg) saturate(1.4)'},
- {name:'Rogue',    base:'soldier',tint:'hue-rotate(110deg)'},
- {name:'Sentry',   base:'soldier',tint:'hue-rotate(200deg) saturate(1.3)'},
- {name:'Warden',   base:'soldier',tint:'hue-rotate(-45deg) saturate(1.4)'},
- {name:'Revenant', base:'soldier',tint:'hue-rotate(285deg) brightness(.85)'},
- {name:'Overlord', base:'orc',    tint:'saturate(.2) brightness(1.35)'}
+ {id:'scout',   name:'Scout',    base:'orc',    tint:'none'},
+ {id:'runner',  name:'Runner',   base:'orc',    tint:'hue-rotate(150deg)'},
+ {id:'brute',   name:'Brute',    base:'orc',    tint:'hue-rotate(-70deg) saturate(1.5)'},
+ {id:'shade',   name:'Shade',    base:'orc',    tint:'hue-rotate(230deg) brightness(.85)'},
+ {id:'sunspawn',name:'Sunspawn', base:'orc',    tint:'hue-rotate(60deg) saturate(1.4)'},
+ {id:'rogue',   name:'Rogue',    base:'soldier',tint:'hue-rotate(110deg)'},
+ {id:'sentry',  name:'Sentry',   base:'soldier',tint:'hue-rotate(200deg) saturate(1.3)'},
+ {id:'warden',  name:'Warden',   base:'soldier',tint:'hue-rotate(-45deg) saturate(1.4)'},
+ {id:'revenant',name:'Revenant', base:'soldier',tint:'hue-rotate(285deg) brightness(.85)'},
+ {id:'overlord',name:'Overlord', base:'orc',    tint:'saturate(.2) brightness(1.35)'}
 ];
 const RANKS=[['Recruit',0],['Cadet',120],['Scout',300],['Sergeant',600],['Knight',1000],
              ['Captain',1600],['Commander',2400],['Champion',3400],['Legend',5000]];
@@ -93,7 +95,7 @@ const LESSONS=[
 
 /* ---------- state ---------- */
 const DEF={coins:0,xp:0,best:{},stars:{},owned:['core','cadet'],buddy:'',voice:1,sfx:1,heb:1,skin:'core',arena:'auto',voiceName:'',voicePick:0,hero:'cadet',
- keys:{},ver:'',dayN:0,streak:0,bestStreak:0,today:null,ach:{},life:{perfect:0},seenArena:{}};
+ keys:{},ver:'',dayN:0,streak:0,bestStreak:0,today:null,ach:{},life:{perfect:0},seenArena:{},seenFoe:{}};
 let S=Object.assign({},DEF);
 try{const raw=localStorage.getItem('keyquest');if(raw)S=Object.assign({},DEF,JSON.parse(raw));}catch(e){}
 /* migrate older saves */
@@ -420,21 +422,83 @@ window.addEventListener('resize',()=>{if(!$('viewPlay').classList.contains('hidd
 function stopLoop(){running=false;}
 
 /* ---------- roster ---------- */
-function drawPicker(){
-  const box=$('picker');box.innerHTML='';
-  FIGHTERS.forEach(f=>{
-    const owned=S.owned.includes(f.id)||f.cost===0;
+/* One sprite tile, three callers — the roster sheet, the bestiary album and the
+   menu summary. A silhouette is the same draw with the colour taken out. */
+function spriteCanvas(base,tint,hidden,scale){
+  const c=document.createElement('canvas');c.width=FW;c.height=FH;
+  const g=c.getContext('2d');g.imageSmoothingEnabled=false;
+  if(atlasReady){
+    g.filter=hidden?'brightness(0) opacity(.45)':(tint&&tint!=='none'?tint:'none');
+    g.drawImage(ATLAS,0,BASE[base].idle*FH,FW,FH,0,0,FW,FH);
+  }
+  if(scale)c.style.width=scale;
+  return c;
+}
+function metCount(){return BESTIARY.filter(e=>S.seenFoe[e.id]).length;}
+function drawBest(){
+  const g=$('bestGrid');if(!g)return;
+  g.innerHTML='';
+  BESTIARY.forEach(e=>{
+    const met=!!S.seenFoe[e.id];
+    const d=document.createElement('div');
+    d.className='foe'+(met?' met':'');
+    d.appendChild(spriteCanvas(e.base,e.tint,!met));
+    const n=document.createElement('b');n.textContent=met?e.name:'???';d.appendChild(n);
+    const s2=document.createElement('small');
+    s2.textContent=met?'defeated':'not met yet';d.appendChild(s2);
+    g.appendChild(d);
+  });
+  $('bestCount').textContent=metCount()+' of '+BESTIARY.length+' met';
+  const row=$('bestRow');if(row)row.textContent=metCount()+' of '+BESTIARY.length+' enemies met';
+}
+function openBest(){closeSheets();drawBest();$('bestSheet').classList.remove('hidden');}
+function closeBest(){$('bestSheet').classList.add('hidden');openStats();}
+
+/* ---------- the roster ----------
+   The menu shows the fighter you are using and nothing else; the full roster is
+   a sheet, so the menu is the same height with six fighters or sixty. */
+let hTab='all',hFilter='';
+function heroOwned(f){return S.owned.includes(f.id)||f.cost===0;}
+function drawHeroSummary(){
+  const box=$('picker');if(!box)return;
+  box.innerHTML='';
+  const f=fighter(S.hero);
+  const card=document.createElement('div');card.className='heroNow';
+  card.appendChild(spriteCanvas(f.base,f.tint,false));
+  const t=document.createElement('div');t.className='heroTxt';
+  t.innerHTML='<b>'+f.name+'</b><small>'+f.note+'</small>';
+  card.appendChild(t);
+  const btn=document.createElement('button');btn.className='pill';btn.id='heroOpen';
+  btn.textContent='Change fighter';
+  const owned=FIGHTERS.filter(heroOwned).length;
+  const cnt=document.createElement('small');cnt.className='heroCount';
+  cnt.textContent=owned+' of '+FIGHTERS.length+' unlocked';
+  card.appendChild(btn);card.appendChild(cnt);
+  btn.onclick=openHero;
+  box.appendChild(card);
+}
+function drawHeroSheet(){
+  const g=$('heroGrid');if(!g)return;
+  g.innerHTML='';
+  const f2=hFilter.toLowerCase();
+  const list=FIGHTERS.filter(f=>{
+    if(hTab==='owned'&&!heroOwned(f))return false;
+    if(hTab==='locked'&&heroOwned(f))return false;
+    if(f2&&!(f.name.toLowerCase().includes(f2)||f.note.toLowerCase().includes(f2)))return false;
+    return true;
+  });
+  if(!list.length){
+    const e=document.createElement('p');e.className='vpempty';
+    e.textContent=hTab==='locked'?'Every fighter is unlocked.':'Nothing here matches that.';
+    g.appendChild(e);
+  }
+  list.forEach(f=>{
+    const owned=heroOwned(f);
     const b=document.createElement('button');
     b.className='pick'+(S.hero===f.id?' sel':'')+(owned?'':' locked');
-    const c=document.createElement('canvas');c.width=FW;c.height=FH;
-    const g=c.getContext('2d');g.imageSmoothingEnabled=false;
-    if(atlasReady){
-      if(f.tint!=='none')g.filter=f.tint;
-      g.drawImage(ATLAS,0,BASE[f.base].idle*FH,FW,FH,0,0,FW,FH);
-    }
-    b.appendChild(c);
+    b.appendChild(spriteCanvas(f.base,f.tint,false));
     const n=document.createElement('b');n.textContent=f.name;b.appendChild(n);
-    const s=document.createElement('small');s.textContent=f.note;b.appendChild(s);
+    const s3=document.createElement('small');s3.textContent=f.note;b.appendChild(s3);
     const cst=document.createElement('span');cst.className='cost';
     cst.textContent=owned?(S.hero===f.id?'Selected':'Tap to use'):f.cost+' coins';
     b.appendChild(cst);
@@ -443,11 +507,27 @@ function drawPicker(){
         if(S.coins<f.cost){cst.textContent='Need '+(f.cost-S.coins)+' more';return;}
         S.coins-=f.cost;S.owned.push(f.id);$('coinN').textContent=S.coins;
       }
-      S.hero=f.id;save();drawPicker();
+      S.hero=f.id;save();drawHeroSheet();drawHeroTabs();drawHeroSummary();
     });
-    box.appendChild(b);
+    g.appendChild(b);
   });
 }
+function drawHeroTabs(){
+  const bar=$('heroTabs');if(!bar)return;
+  const owned=FIGHTERS.filter(heroOwned).length;
+  const tabs=[['all','All',FIGHTERS.length],['owned','Unlocked',owned],['locked','Locked',FIGHTERS.length-owned]];
+  bar.innerHTML='';
+  tabs.forEach(([id,t,n])=>{
+    const b=document.createElement('button');
+    b.className='tab'+(hTab===id?' on':'');
+    b.innerHTML=t+'<small>'+n+'</small>';
+    b.onclick=()=>{hTab=id;drawHeroTabs();drawHeroSheet();};
+    bar.appendChild(b);
+  });
+}
+function openHero(){closeSheets();drawHeroTabs();drawHeroSheet();$('heroSheet').classList.remove('hidden');}
+function closeHero(){$('heroSheet').classList.add('hidden');drawHeroSummary();}
+function drawPicker(){drawHeroSummary();}
 function rankInfo(){
   let i=0;for(let k=0;k<RANKS.length;k++)if(S.xp>=RANKS[k][1])i=k;
   const cur=RANKS[i],nxt=RANKS[i+1];
@@ -676,7 +756,7 @@ function drawVoicePack(){
 /* One sheet at a time. Opening the voice pack from Settings used to leave
    Settings open on top of it, where it swallowed every click. Closing the
    voice pack returns to where it was opened from. */
-const SHEETS=['vpSheet','setSheet','statSheet','wnSheet'];
+const SHEETS=['vpSheet','setSheet','statSheet','wnSheet','heroSheet','bestSheet'];
 function closeSheets(){SHEETS.forEach(id=>$(id).classList.add('hidden'));}
 function openVoice(){closeSheets();$('vpSheet').classList.remove('hidden');drawVoiceTabs();drawVoicePack();}
 function closeVoice(){$('vpSheet').classList.add('hidden');openSet();}
@@ -791,7 +871,9 @@ function start(lesson,list,isCustom,index){
 function newFoe(){
   const pool=Math.max(3,Math.min(BESTIARY.length,(lvl<0?BESTIARY.length:lvl+3)));
   const e=BESTIARY[Math.floor(Math.random()*pool)];
-  foe.base=e.base;foe.tint=e.tint;
+  foe.base=e.base;foe.tint=e.tint;foe.id=e.id;
+  S.seenFoe[e.id]=1;save();
+  $('foeName').textContent=e.name;
   foe.x=CW+40;foe.alpha=1;setAnim(foe,'walk');
   hero.x=-70;hero.alpha=1;setAnim(hero,'walk');
   hpMax=Math.max(1,(items[ix]||'').replace(/ /g,'').length);hp=hpMax;
@@ -974,7 +1056,7 @@ function toMap(){
   $('viewPlay').classList.add('hidden');$('viewShop').classList.add('hidden');
   $('viewMap').classList.remove('hidden');$('backBtn').classList.add('hidden');
   document.body.classList.remove('playing');
-  sceneBiome=null;applySkin();
+  sceneBiome=null;$('foeName').textContent='';applySkin();
   drawPicker();drawMap();drawRank();drawWeak();
 }
 function drawMap(){
@@ -1174,7 +1256,7 @@ function drawWeak(){
 /* Re-evaluated on open, not only at mission end: the achievements are pure
    functions of the counters, so asking again is free and never double-awards,
    and the sheet can never show a state the player has already passed. */
-function openStats(){closeSheets();checkProgress();drawStats();$('statSheet').classList.remove('hidden');}
+function openStats(){closeSheets();checkProgress();drawStats();drawBest();$('statSheet').classList.remove('hidden');}
 function closeStats(){$('statSheet').classList.add('hidden');}
 $('statBtn').onclick=openStats;
 $('statClose').onclick=closeStats;
@@ -1193,6 +1275,12 @@ function drawWN(){
 }
 function openWN(fromSet){closeSheets();drawWN();$('wnSheet').classList.remove('hidden');$('wnSheet').dataset.back=fromSet?'1':'';}
 function closeWN(){const back=$('wnSheet').dataset.back;$('wnSheet').classList.add('hidden');if(back)openSet();}
+$('heroClose').onclick=closeHero;
+$('heroSheet').addEventListener('click',e=>{if(e.target===$('heroSheet'))closeHero();});
+$('heroFilter').addEventListener('input',e=>{hFilter=e.target.value.trim();drawHeroSheet();});
+$('bestOpen').onclick=openBest;
+$('bestClose').onclick=closeBest;
+$('bestSheet').addEventListener('click',e=>{if(e.target===$('bestSheet'))closeBest();});
 $('wnOpen').onclick=()=>openWN(true);
 $('wnClose').onclick=closeWN;
 $('wnSheet').addEventListener('click',e=>{if(e.target===$('wnSheet'))closeWN();});
@@ -1209,6 +1297,8 @@ $('arenaSel').onchange=e=>{
   if(!$('viewPlay').classList.contains('hidden')){pickBiome();document.documentElement.dataset.skin=curBiome().theme;layoutScene();}
 };
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
+  if(!$('bestSheet').classList.contains('hidden'))return closeBest();
+  if(!$('heroSheet').classList.contains('hidden'))return closeHero();
   if(!$('wnSheet').classList.contains('hidden'))return closeWN();
   if(!$('vpSheet').classList.contains('hidden'))return closeVoice();
   if(!$('setSheet').classList.contains('hidden'))closeSet();
