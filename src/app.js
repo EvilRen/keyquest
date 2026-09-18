@@ -1,8 +1,9 @@
-const APP_VERSION='1.8.0';
+const APP_VERSION='1.9.0';
 /* The notes record which release they were written for, and a test fails a
    feature release that ships without rewriting them. Memory does not keep
    release notes current; a gate does. */
-const WHATS_NEW={for:'1.8.0',items:[
+const WHATS_NEW={for:'1.9.0',items:[
+ ['It says what you press','Every key you hit is said back to you — the right ones and the wrong ones — so you hear what your finger actually did. Turn it off in Settings if it is too chatty.'],
  ['Onward','Beat an enemy and your fighter walks on through the world to meet the next one, instead of starting the scene again.'],
  ['A bestiary','Every enemy you fight is recorded. The ones you have not met are shadows — open it from Progress.'],
  ['A roster that fits','The menu shows the fighter you are using; Change fighter opens the full roster with tabs and a search, so the menu stays the same height however many fighters there are.'],
@@ -95,7 +96,7 @@ const LESSONS=[
 ];
 
 /* ---------- state ---------- */
-const DEF={coins:0,xp:0,best:{},stars:{},owned:['core','cadet'],buddy:'',voice:1,sfx:1,heb:1,skin:'core',arena:'auto',voiceName:'',voicePick:0,hero:'cadet',
+const DEF={coins:0,xp:0,best:{},stars:{},owned:['core','cadet'],buddy:'',voice:1,echo:1,sfx:1,heb:1,skin:'core',arena:'auto',voiceName:'',voicePick:0,hero:'cadet',
  keys:{},ver:'',dayN:0,streak:0,bestStreak:0,today:null,ach:{},life:{perfect:0},seenArena:{},seenFoe:{}};
 let S=Object.assign({},DEF);
 try{const raw=localStorage.getItem('keyquest');if(raw)S=Object.assign({},DEF,JSON.parse(raw));}catch(e){}
@@ -628,6 +629,19 @@ function speak(t){speakParts([{t:t}]);}
 const LW={a:'apple',b:'ball',c:'cat',d:'dog',e:'egg',f:'fish',g:'goat',h:'hat',i:'igloo',j:'jam',
 k:'kite',l:'lion',m:'moon',n:'nest',o:'orange',p:'pen',q:'queen',r:'rain',s:'sun',t:'tree',
 u:'umbrella',v:'van',w:'water',x:'box',y:'yoyo',z:'zebra'};
+/* Said on every press, so a child hears what they actually hit rather than only
+   what they were asked for. Short on purpose — "F", not "F for fish" — because
+   the prompt is already spoken and this has to keep up with typing. */
+function sayKey(ch){
+  if(!S.echo||!S.voice||ch===undefined||ch===null)return;
+  const k=String(ch).toLowerCase();
+  if(k===' '){speak(NAMES[' ']);return;}
+  if(k.length!==1&&!NAMES[ch])return;          /* Control, Alt, F5 and friends */
+  if(playClip(k))return;
+  if(/[a-z]/.test(k))speakParts([{t:k.toUpperCase()+'.',rate:.95}]);
+  else if(/[0-9]/.test(k))speakParts([{t:k,rate:.95}]);
+  else speakParts([{t:NAMES[k]||k,rate:.95}]);
+}
 function sayTarget(w){
   if(w.length===1){
     const c=w.toLowerCase();
@@ -1001,12 +1015,16 @@ function handle(ch,real){
   const ok=real?(ch===want||(!needShift&&ch.toLowerCase()===want.toLowerCase())):(ch===base);
   if(ok){
     noteKey(want,true,performance.now()-shownAt);
+    sayKey(want);
     beep(true);coin(1);
     if(want!==' ')swing();
     ci++;
     if(ci>=w.length){
       coin(10);clearKeys();
-      if(ix<items.length-1)speak('Got it!');
+      /* After the echo, not over it: speaking cancels whatever is talking, and
+         on a one-letter word the celebration landed on top of the key the child
+         had just pressed — which is the whole point of the echo. */
+      if(ix<items.length-1)setTimeout(()=>speak('Got it!'),480);
       killFoe(()=>{
         ix++;ci=0;
         if(ix>=items.length)return finish();
@@ -1016,13 +1034,17 @@ function handle(ch,real){
     }
     render();
   }else{
-    noteKey(want,false,0);
+    sayKey(ch);
     beep(false);
     const k=keyFor(real?(SHIFTED[ch]||ch.toLowerCase()):ch);
     if(k){k.classList.add('bad');setTimeout(()=>k.classList.remove('bad'),240);}
     const now=performance.now();
     if(now<guard)return;
     guard=now+900;
+    /* Recorded with the life it costs, not on every press: the guard already
+       decides that a burst is one mistake, and counting each key of a mash
+       against the target wrecked that key's mastery score. */
+    noteKey(want,false,0);
     misses++;lives--;
     counterSwing();
     if(lives<=0)gameOver();
@@ -1128,6 +1150,8 @@ function applySkin(){
   if(item){b.textContent=item.face;b.classList.remove('hidden');}else b.classList.add('hidden');
   document.body.classList.toggle('hide-he',!S.heb);
   $('soundBtn').textContent=S.voice?'On':'Off';
+  $('echoBtn').textContent=S.echo?'On':'Off';
+  $('echoBtn').classList.toggle('off',!S.echo);
   $('sfxBtn').textContent=S.sfx?'On':'Off';
   $('hebBtn').textContent=S.heb?'On':'Off';
   $('soundBtn').classList.toggle('off',!S.voice);
@@ -1137,6 +1161,7 @@ function applySkin(){
 }
 $('soundBtn').onclick=()=>{S.voice=S.voice?0:1;save();applySkin();};
 $('sfxBtn').onclick=()=>{S.sfx=S.sfx?0:1;save();applySkin();if(S.sfx)sfx('swing');};
+$('echoBtn').onclick=()=>{S.echo=S.echo?0:1;save();applySkin();};
 $('hebBtn').onclick=()=>{S.heb=S.heb?0:1;save();applySkin();};
 /* One panel for every setting: the header had grown six controls and was about
    to grow more. Registered once at startup, both openers and both closers. */
