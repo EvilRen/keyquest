@@ -35,6 +35,19 @@ python3 -m http.server 8000
 Opening `index.html` directly from the filesystem works too, though some browsers
 restrict microphone access there — use the local server for the voice pack.
 
+## Tests
+
+No dependencies:
+
+```bash
+node tests/test-content.js
+```
+
+It loads the real `src/app.js` and compares every pair of lists that must
+agree — lesson characters against the keyboard, against what the voice can
+say, against the voice-pack tiles; sprites, shop items and defaults against
+the tables they point into. See `tests/README.md`.
+
 ## Deploying
 
 Vercel: import the repo, framework preset **Other**, leave build command empty and

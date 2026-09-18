@@ -50,7 +50,13 @@ const ROWS = [
 ];
 const SHIFTED = {'!':'1','@':'2','#':'3','$':'4','%':'5','^':'6','&':'7','*':'8','(':'9',')':'0','_':'-','+':'=',
 '?':'/','"':"'",':':';','<':',','>':'.','{':'[','}':']','|':'\\','~':'`'};
-const NAMES={' ':'space','Enter':'enter','Shift':'shift','CapsLock':'caps lock','Backspace':'backspace','Tab':'tab'};
+const NAMES={' ':'space','Enter':'enter','Shift':'shift','CapsLock':'caps lock','Backspace':'backspace','Tab':'tab',
+'!':'exclamation mark','?':'question mark','@':'at sign','#':'hash','$':'dollar sign','%':'percent',
+'^':'caret','&':'and sign','*':'star','(':'open bracket',')':'close bracket','_':'underscore','-':'dash',
+'+':'plus','=':'equals','[':'open square bracket',']':'close square bracket','{':'open curly bracket',
+'}':'close curly bracket',';':'semicolon',':':'colon',"'":'apostrophe','"':'quote mark',',':'comma',
+'.':'full stop','/':'slash','\\':'backslash','|':'pipe','<':'less than','>':'greater than',
+'~':'tilde','`':'back tick'};
 
 /* ---------- missions ---------- */
 const LESSONS=[
@@ -305,8 +311,18 @@ function playClip(tok){
   if(!u)return false;
   try{if(window.speechSynthesis)speechSynthesis.cancel();const a=new Audio(u);a.play();return true;}catch(e){return false;}
 }
-const VTOKENS=['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
-'0','1','2','3','4','5','6','7','8','9','space','enter','shift','backspace'];
+/* Derived, never hand-kept: a symbol a lesson can ask for always gets a tile to record.
+   The old hand-written list omitted every symbol, so the Symbols mission had no voice. */
+const VTOKENS=(()=>{
+  const t=[...'abcdefghijklmnopqrstuvwxyz','0','1','2','3','4','5','6','7','8','9'];
+  const seen=new Set(t);
+  LESSONS.forEach(L=>L.items.forEach(it=>[...it].forEach(ch=>{
+    const c=ch.toLowerCase();
+    if(c===' '||/[a-z0-9]/.test(c)||seen.has(c))return;
+    seen.add(c);t.push(c);
+  })));
+  return t.concat(['space','enter','shift','backspace']);
+})();
 function vlabel(t){return t.length===1?t.toUpperCase():t;}
 async function recordInto(tok,tile){
   if(recTok)return;
