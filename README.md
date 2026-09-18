@@ -16,8 +16,9 @@ Built with my seven-year-old, whose idea this was.
   bought, on a ladder from 100 to 20,000 coins; the other twelve cannot be
   bought at any price and open only by clearing missions, mastering keys, typing
   fast or accurately, keeping a streak, meeting every enemy or fighting in every
-  arena. The menu shows the one you are using; the full roster is a sheet with
-  tabs and a search, so the menu is the same height at six fighters or sixty
+  arena. Your fighter stands in the Play bar and is tapped to swap;
+  the full roster is a sheet with tabs and a search, so the menu is the same
+  height at six fighters or sixty
 - **10 named enemies** that appear as the missions get harder, recorded in a
   bestiary — the ones you have not met yet are shadows
 - **Stars and ranks** — three stars for a flawless mission, XP toward nine ranks

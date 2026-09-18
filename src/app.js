@@ -1,8 +1,9 @@
-const APP_VERSION='2.1.0';
+const APP_VERSION='2.2.0';
 /* The notes record which release they were written for, and a test fails a
    feature release that ships without rewriting them. Memory does not keep
    release notes current; a gate does. */
-const WHATS_NEW={for:'2.1.0',items:[
+const WHATS_NEW={for:'2.2.0',items:[
+ ['Your fighter is up top','Whoever you are playing as now stands in the Play bar. Tap them to swap.'],
  ['Straight into a mission','The big button at the top starts wherever you left off — one tap from opening the game to playing. The missions come first now, with the fighter and the drills below them.'],
  ['Thirty-six fighters','Twenty-four to buy, on a ladder that now runs to twenty thousand coins — and twelve more that no amount of coins will buy. Those open by clearing missions, mastering keys, typing fast, typing accurately, keeping a streak, meeting every enemy and fighting in every arena.'],
  ['It says what you press','Every key you hit is said back to you — the right ones and the wrong ones — so you hear what your finger actually did. Turn it off in Settings if it is too chatty.'],
@@ -530,22 +531,15 @@ function closeBest(){$('bestSheet').classList.add('hidden');openStats();}
 let hTab='all',hFilter='';
 function heroOwned(f){return S.owned.includes(f.id)||(!f.req&&f.cost===0);}
 function drawHeroSummary(){
-  const box=$('picker');if(!box)return;
+  const box=$('heroChip');if(!box)return;
+  const f=fighter(S.hero),owned=FIGHTERS.filter(heroOwned).length;
   box.innerHTML='';
-  const f=fighter(S.hero);
-  const card=document.createElement('div');card.className='heroNow';
-  card.appendChild(spriteCanvas(f.base,f.tint,false));
-  const t=document.createElement('div');t.className='heroTxt';
-  t.innerHTML='<b>'+f.name+'</b><small>'+f.note+'</small>';
-  card.appendChild(t);
-  const btn=document.createElement('button');btn.className='pill';btn.id='heroOpen';
-  btn.textContent='Change fighter';
-  const owned=FIGHTERS.filter(heroOwned).length;
-  const cnt=document.createElement('small');cnt.className='heroCount';
-  cnt.textContent=owned+' of '+FIGHTERS.length+' unlocked';
-  card.appendChild(btn);card.appendChild(cnt);
-  btn.onclick=openHero;
-  box.appendChild(card);
+  box.appendChild(spriteCanvas(f.base,f.tint,false));
+  const w=document.createElement('span');w.className='who';
+  w.innerHTML='<b>'+f.name+'</b><small>change · '+owned+'/'+FIGHTERS.length+'</small>';
+  box.appendChild(w);
+  box.title=f.name+' — '+f.note+'. Tap to change fighter.';
+  box.onclick=openHero;
 }
 function drawHeroSheet(){
   const g=$('heroGrid');if(!g)return;
