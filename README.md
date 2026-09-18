@@ -20,6 +20,16 @@ Built with my seven-year-old, whose idea this was.
 - **Combat sound** — synthesised swing, impact and death effects, layered from
   an oscillator sweep and a band-passed noise burst. No audio files. The
   header's Sound button mutes them separately from the letter voice
+- **Ten environments** — neon city, moonlit wood, crystal cave, sun dunes,
+  frost peaks, orbit deck, ashfall, keep hall and two more. A mission walks to
+  the next one; fireflies, snow and embers move
+- **Per-key mastery** — every press is scored on accuracy *and* time to find the
+  key. Target practice builds a drill from the weakest keys and the ones never
+  tried, and the Progress sheet shows a keyboard heat map
+- **Dailies, a streak and achievements** — three date-seeded missions a day, a
+  day streak, eleven achievements that are pure functions of lifetime counters
+- **Settings** — voice, game sound, Hebrew legends, the computer voice and the
+  arena, all behind one button
 - **Free practice** — type any word or password and the keys light up for it
 
 ## Running it
@@ -68,7 +78,8 @@ recolours of those two sprites.
 
 ## Saved data
 
-Progress, coins and settings live in `localStorage` under `keyquest`.
+Progress, coins, per-key mastery and settings live in `localStorage` under
+`keyquest`.
 Recorded voice clips live in IndexedDB under `keyquest-voice`. Both are per-browser.
 
 ## Credits

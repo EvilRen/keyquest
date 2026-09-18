@@ -11,7 +11,7 @@ const {install}=require('./dom-stub.js');
 
 const SRC=path.join(__dirname,'..','src','app.js');
 const code=fs.readFileSync(SRC,'utf8')+
-  '\n;globalThis.__T={LESSONS,keyEls,NAMES,VTOKENS,SHOP,ARENA,FIGHTERS,BESTIARY,BASE,DEF,LW,RANKS,SHIFTED,ROWS,HE,Z};';
+  '\n;globalThis.__T={LESSONS,keyEls,NAMES,VTOKENS,SHOP,BIOMES,DAILIES,ACH,FIGHTERS,BESTIARY,BASE,DEF,LW,RANKS,SHIFTED,ROWS,HE,Z};';
 
 const sandbox=install();
 vm.createContext(sandbox);
@@ -65,16 +65,34 @@ ok('every fighter points at a sprite row that exists',
    'bad: '+JSON.stringify(T.FIGHTERS.filter(f=>!T.BASE[f.base]).map(f=>f.id)));
 ok('every enemy points at a sprite row that exists',
    T.BESTIARY.every(f=>T.BASE[f.base]));
-ok('every shop arena skin has a palette',
-   T.SHOP.filter(s=>s.type==='skin').every(s=>T.ARENA[s.id]),
-   'missing: '+JSON.stringify(T.SHOP.filter(s=>s.type==='skin'&&!T.ARENA[s.id]).map(s=>s.id)));
+const biome=id=>T.BIOMES.find(b=>b.id===id);
+ok('every shop arena skin is a real environment',
+   T.SHOP.filter(s=>s.type==='skin').every(s=>biome(s.id)),
+   'missing: '+JSON.stringify(T.SHOP.filter(s=>s.type==='skin'&&!biome(s.id)).map(s=>s.id)));
+ok('every environment has a name, a theme, a palette and a painter',
+   T.BIOMES.every(b=>b.id&&b.name&&b.theme&&b.pal&&typeof b.paint==='function'),
+   'bad: '+JSON.stringify(T.BIOMES.filter(b=>!(b.id&&b.name&&b.theme&&b.pal&&typeof b.paint==='function')).map(b=>b.id)));
+ok('every environment palette defines every colour a painter reads',
+   T.BIOMES.every(b=>['sky','ink','glow','floor','grid','solid','lit'].every(k=>b.pal[k])),
+   'incomplete: '+JSON.stringify(T.BIOMES.filter(b=>!['sky','ink','glow','floor','grid','solid','lit'].every(k=>b.pal[k])).map(b=>b.id)));
+ok('no two environments share an id',new Set(T.BIOMES.map(b=>b.id)).size===T.BIOMES.length);
+/* The page chrome is themed in CSS and the arena is painted in JS; the two are
+   separate lists and drift silently — a biome naming a theme nobody styled
+   simply keeps the previous screen's colours. */
+const css=fs.readFileSync(path.join(__dirname,'..','src','styles.css'),'utf8');
+const themed=[...new Set(T.BIOMES.map(b=>b.theme))];
+const unstyled=themed.filter(t=>!css.includes(':root[data-skin="'+t+'"]')&&t!=='core');
+ok('every environment theme has a rule in the stylesheet',unstyled.length===0,
+   'unstyled: '+JSON.stringify(unstyled));
 ok('every shop item has a handled type',
    T.SHOP.every(s=>s.type==='skin'||s.type==='buddy'),
    'types: '+JSON.stringify([...new Set(T.SHOP.map(s=>s.type))]));
 ok('every shop item costs something',T.SHOP.every(s=>s.cost>0));
 ok('everything owned by default actually exists',
-   T.DEF.owned.every(o=>T.ARENA[o]||T.FIGHTERS.some(f=>f.id===o)||T.SHOP.some(s=>s.id===o)),
-   'dangling: '+JSON.stringify(T.DEF.owned.filter(o=>!T.ARENA[o]&&!T.FIGHTERS.some(f=>f.id===o)&&!T.SHOP.some(s=>s.id===o))));
+   T.DEF.owned.every(o=>biome(o)||T.FIGHTERS.some(f=>f.id===o)||T.SHOP.some(s=>s.id===o)),
+   'dangling: '+JSON.stringify(T.DEF.owned.filter(o=>!biome(o)&&!T.FIGHTERS.some(f=>f.id===o)&&!T.SHOP.some(s=>s.id===o))));
+ok('the default arena setting is a real choice',
+   T.DEF.arena==='auto'||!!biome(T.DEF.arena));
 ok('the default fighter and skin are owned by default',
    T.DEF.owned.includes(T.DEF.hero)&&T.DEF.owned.includes(T.DEF.skin));
 
@@ -90,6 +108,26 @@ ok('no two shop items share an id',
    new Set(T.SHOP.map(s=>s.id)).size===T.SHOP.length);
 ok('every lesson has at least one item',T.LESSONS.every(L=>L.items.length>0));
 ok('every lesson has a name and a subtitle',T.LESSONS.every(L=>L.n&&L.s));
+
+console.log('dailies and achievements');
+ok('every daily is complete and rewarding',
+   T.DAILIES.every(m=>m.id&&m.t&&m.goal>0&&m.coins>0&&typeof m.get==='function'),
+   'bad: '+JSON.stringify(T.DAILIES.filter(m=>!(m.id&&m.t&&m.goal>0&&m.coins>0&&typeof m.get==='function')).map(m=>m.id)));
+ok('no two dailies share an id',new Set(T.DAILIES.map(m=>m.id)).size===T.DAILIES.length);
+ok('there are at least three dailies to choose from',T.DAILIES.length>=3);
+/* A daily reading a counter nobody increments can never be finished, and the
+   day object and the getters are two lists. */
+ok('every daily reads a counter the day object actually has',(()=>{
+  const day={n:0,missions:0,hits:0,perfect:0,drills:0,coins:0,arenas:[],done:{}};
+  return T.DAILIES.every(m=>{const v=m.get(day);return typeof v==='number'&&!isNaN(v);});
+})());
+ok('every achievement is a pure test with an id and a name',
+   T.ACH.every(a=>a.id&&a.t&&typeof a.ok==='function'));
+ok('no two achievements share an id',new Set(T.ACH.map(a=>a.id)).size===T.ACH.length);
+ok('no achievement is already earned on a fresh save',(()=>{
+  const blank={hits:0,miss:0,mastered:0,acc:0,avg:0,cleared:0,stars:0};
+  return T.ACH.every(a=>{try{return !a.ok(blank);}catch(e){return false;}});
+})(),'earned at zero: '+JSON.stringify(T.ACH.filter(a=>{try{return a.ok({hits:0,miss:0,mastered:0,acc:0,avg:0,cleared:0,stars:0});}catch(e){return true;}}).map(a=>a.id)));
 
 console.log('keyboard');
 ok('every key with a Hebrew legend is a real key',

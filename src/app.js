@@ -1,3 +1,4 @@
+const APP_VERSION='1.4.0';
 function $(id){return document.getElementById(id);}
 
 /* ---------- atlas ---------- */
@@ -79,7 +80,8 @@ const LESSONS=[
 ];
 
 /* ---------- state ---------- */
-const DEF={coins:0,xp:0,best:{},stars:{},owned:['core','cadet'],buddy:'',voice:1,sfx:1,heb:1,skin:'core',voiceName:'',voicePick:0,hero:'cadet'};
+const DEF={coins:0,xp:0,best:{},stars:{},owned:['core','cadet'],buddy:'',voice:1,sfx:1,heb:1,skin:'core',arena:'auto',voiceName:'',voicePick:0,hero:'cadet',
+ keys:{},ver:'',dayN:0,streak:0,bestStreak:0,today:null,ach:{},life:{perfect:0},seenArena:{}};
 let S=Object.assign({},DEF);
 try{const raw=localStorage.getItem('keyquest');if(raw)S=Object.assign({},DEF,JSON.parse(raw));}catch(e){}
 /* migrate older saves */
@@ -112,7 +114,13 @@ cx.imageSmoothingEnabled=false;
    about the same share of the height, and the width then buys environment. */
 let CW=300,CH=112,GROUND=104,HORIZON=80;
 let HERO_HOME=50,FOE_HOME=148,DRAW_Y=GROUND-FH*SC+2;
-let STARS=[],TOWERS=[];
+let SD={};let sceneBiome=null;
+function curBiome(){return sceneBiome||BIOME(S.skin);}
+/* A mission walks to the next place rather than replaying the same one. */
+function pickBiome(){
+  if(S.arena&&S.arena!=='auto'){const b=BIOMES.find(x=>x.id===S.arena);if(b){sceneBiome=b;return;}}
+  sceneBiome=lvl>=0?BIOMES[lvl%BIOMES.length]:BIOMES[Math.floor(Math.random()*BIOMES.length)];
+}
 const PAIR_GAP=98;              /* the distance between the two fighters */
 function rnd(seed){let t=seed+0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);
   return ((t^t>>>14)>>>0)/4294967296;}
@@ -136,50 +144,214 @@ function layoutScene(){
   FOE_HOME=HERO_HOME+PAIR_GAP;
   buildSky();
 }
-function buildSky(){
-  STARS=[];
-  const n=Math.round(CW*HORIZON/2800);
-  for(let i=0;i<n;i++)STARS.push([Math.round(rnd(i*7+1)*(CW-2)),Math.round(rnd(i*13+5)*(HORIZON-6))+2]);
-  TOWERS=[];
-  const step=18,m=Math.floor(CW/step);
-  for(let i=0;i<m;i++){
-    const x=i*step+2,h=Math.round((.28+rnd(i*31+3)*.34)*HORIZON);
-    TOWERS.push([x,HORIZON-h]);
-  }
-}
 let hero={base:'soldier',x:-70,anim:'idle',t0:0,alpha:1,tint:'none'};
 let foe ={base:'orc',    x:360,anim:'idle',t0:0,alpha:1,tint:'none'};
 let lives=3,maxLives=3,running=false;
 
-const ARENA={
- core :{sky:'#060D18',star:'#6FE3DC',glow:'#35E0D0',floor:'#08131F',grid:'#17414C',tower:'#0C1B2B',win:'#35E0D0'},
- ember:{sky:'#150810',star:'#FFC58A',glow:'#FF7A45',floor:'#1A0A10',grid:'#5A2A1E',tower:'#24101A',win:'#FF9A3C'},
- void :{sky:'#0A0618',star:'#C9A6FF',glow:'#A97BFF',floor:'#120B22',grid:'#3A2660',tower:'#180F2E',win:'#C08CFF'}
-};
+/* ---------- environments ----------
+   Ten places, not one skyline recoloured. Each owns a palette, a page theme and
+   a painter that works from CW/CH/HORIZON, so every one fills whatever shape the
+   arena turns out to be. Missions walk through them in order, so getting further
+   into the game means going somewhere new. */
 function px(c,x,y,w,h){cx.fillStyle=c;cx.fillRect(x,y,w,h);}
-function drawArena(){
-  const p=ARENA[S.skin]||ARENA.core;
-  px(p.sky,0,0,CW,HORIZON);
-  p_stars(p);
-  /* skyline */
-  TOWERS.forEach(([x,y])=>{
-    px(p.tower,x,y,14,HORIZON-y);
-    for(let wy=y+4;wy<HORIZON-4;wy+=7)px(p.win,x+4,wy,2,2);
-  });
-  /* floor + perspective grid */
-  px(p.floor,0,HORIZON,CW,CH-HORIZON);
-  cx.strokeStyle=p.grid;cx.lineWidth=1;
-  cx.beginPath();
+function dots(a,c,s){a.forEach(([x,y])=>px(c,x,y,s||1,s||1));}
+function disc(x,y,r,c){cx.fillStyle=c;cx.beginPath();cx.arc(x,y,r,0,6.284);cx.fill();}
+function tri(x,y,w,h,c){cx.fillStyle=c;cx.beginPath();cx.moveTo(x,y+h);cx.lineTo(x+w/2,y);cx.lineTo(x+w,y+h);cx.closePath();cx.fill();}
+function neonGrid(c){
+  cx.strokeStyle=c;cx.lineWidth=1;cx.beginPath();
   const span=Math.ceil(CW/44),deep=CH-HORIZON;
   for(let i=-span;i<=span;i++){cx.moveTo(CW/2+i*10,HORIZON+.5);cx.lineTo(CW/2+i*74,CH);}
-  [.125,.28,.47,.72,1].forEach(f=>{
-    const y=Math.round(HORIZON+deep*f)-(f===1?1:0);
-    cx.moveTo(0,y+.5);cx.lineTo(CW,y+.5);
-  });
+  [.125,.28,.47,.72,1].forEach(f=>{const y=Math.round(HORIZON+deep*f)-(f===1?1:0);
+    cx.moveTo(0,y+.5);cx.lineTo(CW,y+.5);});
   cx.stroke();
-  px(p.glow,0,HORIZON-1,CW,1);
 }
-function p_stars(p){STARS.forEach(([x,y])=>px(p.star,x,y,1,1));}
+function bands(cols){
+  const deep=CH-HORIZON;
+  cols.forEach((c,i)=>{
+    const y0=HORIZON+Math.round(deep*(i/cols.length)),y1=HORIZON+Math.round(deep*((i+1)/cols.length));
+    px(c,0,y0,CW,y1-y0);
+  });
+}
+function drift(v,span,ts,speed){return ((v+ts*speed)%span+span)%span;}
+
+const BIOMES=[
+{id:'core',name:'Neon city',theme:'core',
+ pal:{sky:'#060D18',ink:'#6FE3DC',glow:'#35E0D0',floor:'#08131F',grid:'#17414C',solid:'#0C1B2B',lit:'#35E0D0'},
+ paint(p,D){
+   px(p.sky,0,0,CW,HORIZON);dots(D.stars,p.ink);
+   D.towers.forEach(([x,y,w])=>{px(p.solid,x,y,w,HORIZON-y);
+     for(let wy=y+4;wy<HORIZON-4;wy+=7)px(p.lit,x+4,wy,2,2);});
+   px(p.floor,0,HORIZON,CW,CH-HORIZON);neonGrid(p.grid);
+   px(p.glow,0,HORIZON-1,CW,1);
+ }},
+
+{id:'forest',name:'Moonlit wood',theme:'forest',
+ pal:{sky:'#081A15',ink:'#CDEFD6',glow:'#57D98B',floor:'#0B2018',grid:'#1E4A33',solid:'#061109',lit:'#9BE8B4'},
+ paint(p,D,ts){
+   px(p.sky,0,0,CW,HORIZON);dots(D.stars,p.ink);
+   const mx=Math.round(CW*.8),my=Math.round(HORIZON*.24),r=Math.max(4,Math.round(HORIZON*.1));
+   disc(mx,my,r,'#E6F7EA');disc(mx-r*.45,my-r*.3,r*.85,p.sky);
+   D.trees.forEach(([x,h,w,near])=>{
+     const c=near?'#0D2A1C':p.solid,top=HORIZON-h;
+     px(c,x+((w/2)|0)-1,top+((h*.6)|0),3,(h*.4)|0);
+     for(let k=0;k<3;k++){
+       const ww=Math.max(4,Math.round(w*(.44+k*.28))),yy=top+Math.round(h*.18*k);
+       px(c,x+Math.round((w-ww)/2),yy,ww,Math.max(3,Math.round(h*.3)));
+     }
+   });
+   bands([p.floor,'#0D2619','#102D1E']);
+   dots(D.tufts,p.grid,2);
+   D.flies.forEach(([x,y],i)=>px(p.lit,x,HORIZON-4-Math.round(drift(y,26,ts,.004+i%3*.001)),1,1));
+   px(p.glow,0,HORIZON-1,CW,1);
+ }},
+
+{id:'cave',name:'Crystal cave',theme:'cave',
+ pal:{sky:'#0A0A12',ink:'#7C6BB5',glow:'#8E7BFF',floor:'#141020',grid:'#2C2440',solid:'#191428',lit:'#B49BFF'},
+ paint(p,D){
+   px(p.sky,0,0,CW,HORIZON);
+   D.spikes.forEach(([x,w,h])=>{ /* stalactites */
+     cx.fillStyle=p.solid;cx.beginPath();cx.moveTo(x,0);cx.lineTo(x+w,0);cx.lineTo(x+w/2,h);cx.closePath();cx.fill();
+   });
+   D.gems.forEach(([x,y,h],i)=>{
+     const w=3+(i%3),base=y-Math.round(h*(i%2?.35:1));
+     tri(x,base-h,w,h,i%2?p.glow:p.lit);px(p.ink,x+((w/2)|0),base-Math.round(h*.4),1,Math.round(h*.4));
+   });
+   bands([p.floor,'#181327','#1E1830']);
+   D.rocks.forEach(([x,w,h],i)=>{const t=Math.round(h*2.2),c=i%2?'#241C38':p.solid;
+     cx.fillStyle=c;cx.beginPath();
+     cx.moveTo(x,HORIZON+Math.round(h*.6));cx.lineTo(x+w/2,HORIZON-t);cx.lineTo(x+w,HORIZON+Math.round(h*.6));
+     cx.closePath();cx.fill();});
+   px(p.glow,0,HORIZON-1,CW,1);
+ }},
+
+{id:'desert',name:'Sun dunes',theme:'desert',
+ pal:{sky:'#2A1830',ink:'#FFD9A8',glow:'#FF9E4A',floor:'#3A2318',grid:'#6B4224',solid:'#1E1020',lit:'#FFC163'},
+ paint(p,D){
+   px(p.sky,0,0,CW,HORIZON);
+   px('#3C1E34',0,Math.round(HORIZON*.45),CW,Math.round(HORIZON*.55));
+   const sx=Math.round(CW*.5),sy=Math.round(HORIZON*.62),r=Math.max(6,Math.round(HORIZON*.2));
+   disc(sx,sy,r,'#FFB35C');disc(sx,sy,r*.72,'#FFD98E');
+   D.dunes.forEach(([x,w,h])=>tri(x,HORIZON-h,w,h,p.solid));
+   bands([p.floor,'#43281B','#4C2E1E']);
+   D.ripples.forEach(([x,y,w])=>px(p.grid,x,y,w,1));
+   px(p.glow,0,HORIZON-1,CW,1);
+ }},
+
+{id:'snow',name:'Frost peaks',theme:'snow',
+ pal:{sky:'#101E30',ink:'#E8F4FF',glow:'#8FD2FF',floor:'#1B2E44',grid:'#37567A',solid:'#16283C',lit:'#FFFFFF'},
+ paint(p,D,ts){
+   px(p.sky,0,0,CW,HORIZON);dots(D.stars,p.ink);
+   D.peaks.forEach(([x,w,h])=>{
+     tri(x,HORIZON-h,w,h,p.solid);
+     tri(x+w*.32,HORIZON-h,w*.36,h*.34,'#CFE6FA');
+   });
+   bands([p.floor,'#20374F','#26405A']);
+   D.cracks.forEach(([x,y,w])=>px(p.grid,x,y,w,1));
+   D.flakes.forEach(([x,y],i)=>px(p.lit,(x+Math.round(Math.sin((ts/900)+i)*3))%CW,
+     Math.round(drift(y,CH,ts,.012+i%4*.003)),1,1));
+   px(p.glow,0,HORIZON-1,CW,1);
+ }},
+
+{id:'space',name:'Orbit deck',theme:'space',
+ pal:{sky:'#05060F',ink:'#CFE0FF',glow:'#5AA9FF',floor:'#0C1220',grid:'#27436B',solid:'#101A2E',lit:'#8FC0FF'},
+ paint(p,D){
+   px(p.sky,0,0,CW,HORIZON);dots(D.stars,p.ink);
+   const px0=Math.round(CW*.24),py=Math.round(HORIZON*.38),r=Math.max(6,Math.round(HORIZON*.22));
+   disc(px0,py,r,'#3B5C9E');disc(px0-r*.3,py-r*.3,r*.55,'#5C82C9');
+   cx.strokeStyle='#7FA6E8';cx.lineWidth=1;cx.beginPath();
+   cx.ellipse(px0,py,r*1.7,r*.36,-0.3,0,6.284);cx.stroke();
+   px(p.floor,0,HORIZON,CW,CH-HORIZON);
+   D.panels.forEach(([x,y,w,h])=>{px(p.solid,x,y,w,h);px(p.grid,x,y,w,1);});
+   neonGrid(p.grid);
+   px(p.glow,0,HORIZON-1,CW,1);
+ }},
+
+{id:'volcano',name:'Ashfall',theme:'volcano',
+ pal:{sky:'#1A0A0A',ink:'#FF9A6B',glow:'#FF5A2B',floor:'#1E1112',grid:'#5E2416',solid:'#120809',lit:'#FFB347'},
+ paint(p,D,ts){
+   px(p.sky,0,0,CW,HORIZON);
+   px('#2A0E0C',0,Math.round(HORIZON*.5),CW,Math.round(HORIZON*.5));
+   D.cones.forEach(([x,w,h])=>{
+     tri(x,HORIZON-h,w,h,p.solid);
+     px(p.glow,Math.round(x+w*.42),Math.round(HORIZON-h),Math.max(3,Math.round(w*.16)),3);
+   });
+   bands([p.floor,'#241416','#2A181A']);
+   D.cracks.forEach(([x,y,w])=>px(p.glow,x,y,w,1));
+   D.embers.forEach(([x,y],i)=>px(p.lit,x,HORIZON-Math.round(drift(y,HORIZON,ts,.02+i%3*.006)),1,1));
+   px(p.glow,0,HORIZON-1,CW,1);
+ }},
+
+{id:'castle',name:'Keep hall',theme:'castle',
+ pal:{sky:'#1A1622',ink:'#D9C79A',glow:'#E0B457',floor:'#241E2C',grid:'#3C3348',solid:'#2A2434',lit:'#FFD98A'},
+ paint(p,D){
+   px(p.sky,0,0,CW,HORIZON);
+   for(let y=0;y<HORIZON;y+=7)for(let x=(y/7)%2?0:-9;x<CW;x+=18)px(p.solid,x,y,17,6);
+   D.arches.forEach(([x,w])=>{
+     const h=Math.round(HORIZON*.5),y=Math.round(HORIZON*.22);
+     px('#0E0B14',x,y,w,h);disc(x+w/2,y,w/2,'#0E0B14');
+     px(p.lit,x+2,y+2,w-4,2);
+   });
+   D.banners.forEach(([x,w,h])=>{px(p.glow,x,Math.round(HORIZON*.14),w,h);
+     px('#8E6A22',x,Math.round(HORIZON*.14),w,2);});
+   bands([p.floor,'#2A2334','#312941']);
+   D.tiles.forEach(([x,y,w])=>px(p.grid,x,y,w,1));
+   px(p.glow,0,HORIZON-1,CW,1);
+ }},
+
+{id:'ember',name:'Ember city',theme:'ember',
+ pal:{sky:'#150810',ink:'#FFC58A',glow:'#FF7A45',floor:'#1A0A10',grid:'#5A2A1E',solid:'#24101A',lit:'#FF9A3C'},
+ paint(p,D){BIOMES[0].paint(p,D);}},
+
+{id:'void',name:'Void city',theme:'void',
+ pal:{sky:'#0A0618',ink:'#C9A6FF',glow:'#A97BFF',floor:'#120B22',grid:'#3A2660',solid:'#180F2E',lit:'#C08CFF'},
+ paint(p,D){BIOMES[0].paint(p,D);}}
+];
+const BIOME=id=>BIOMES.find(b=>b.id===id)||BIOMES[0];
+/* Every environment's scatter is generated from the arena's real size, so a wide
+   arena gets a full skyline rather than six towers at fixed coordinates. */
+function buildSky(){
+  const n=k=>Math.max(3,Math.round(CW*k)),sky=HORIZON;
+  const pts=(count,seed,hi)=>{const a=[];for(let i=0;i<count;i++)
+    a.push([Math.round(rnd(i*7+seed)*(CW-2)),Math.round(rnd(i*13+seed+5)*(hi-4))+2]);return a;};
+  SD={
+    stars:pts(Math.round(CW*sky/2800)+4,1,sky),
+    towers:(()=>{const a=[],step=18;for(let i=0;i<Math.floor(CW/step);i++)
+      a.push([i*step+2,sky-Math.round((.28+rnd(i*31+3)*.34)*sky),14]);return a;})(),
+    trees:(()=>{const a=[],step=22;for(let i=0;i<Math.floor(CW/step)+1;i++)
+      a.push([i*step-4,Math.round((.42+rnd(i*17+9)*.42)*sky),Math.round(14+rnd(i*23)*10),i%2===0]);return a;})(),
+    tufts:pts(n(.05),21,CH-HORIZON).map(([x,y])=>[x,HORIZON+y%Math.max(1,CH-HORIZON-2)]),
+    flies:pts(n(.02)+3,33,sky),
+    spikes:(()=>{const a=[],step=16;for(let i=0;i<Math.floor(CW/step);i++)
+      a.push([i*step,12+Math.round(rnd(i*41)*8),Math.round((.18+rnd(i*11)*.3)*sky)]);return a;})(),
+    gems:(()=>{const a=[],step=34;for(let i=0;i<Math.floor(CW/step);i++)
+      a.push([i*step+8,sky,Math.round(5+rnd(i*53)*9)]);return a;})(),
+    rocks:(()=>{const a=[],step=40;for(let i=0;i<Math.floor(CW/step);i++)
+      a.push([i*step+6,Math.round(12+rnd(i*61)*14),Math.round(4+rnd(i*67)*7)]);return a;})(),
+    dunes:(()=>{const a=[],step=46;for(let i=0;i<Math.floor(CW/step)+1;i++)
+      a.push([i*step-10,Math.round(40+rnd(i*71)*34),Math.round((.16+rnd(i*73)*.2)*sky)]);return a;})(),
+    ripples:(()=>{const a=[],d=CH-HORIZON;for(let i=0;i<Math.round(CW*.06);i++)
+      a.push([Math.round(rnd(i*79)*CW),HORIZON+2+Math.round(rnd(i*83)*(d-3)),Math.round(4+rnd(i*89)*9)]);return a;})(),
+    peaks:(()=>{const a=[],step=52;for(let i=0;i<Math.floor(CW/step)+1;i++)
+      a.push([i*step-12,Math.round(52+rnd(i*97)*30),Math.round((.3+rnd(i*101)*.28)*sky)]);return a;})(),
+    cracks:(()=>{const a=[],d=CH-HORIZON;for(let i=0;i<Math.round(CW*.05);i++)
+      a.push([Math.round(rnd(i*103)*CW),HORIZON+2+Math.round(rnd(i*107)*(d-3)),Math.round(5+rnd(i*109)*11)]);return a;})(),
+    flakes:pts(n(.06)+6,41,CH),
+    panels:(()=>{const a=[],step=26,d=CH-HORIZON;for(let i=0;i<Math.floor(CW/step);i++)
+      a.push([i*step,HORIZON+Math.round(d*.35),24,Math.max(2,Math.round(d*.18))]);return a;})(),
+    cones:(()=>{const a=[],step=58;for(let i=0;i<Math.floor(CW/step)+1;i++)
+      a.push([i*step-14,Math.round(50+rnd(i*113)*34),Math.round((.28+rnd(i*127)*.26)*sky)]);return a;})(),
+    embers:pts(n(.04)+4,51,sky),
+    arches:(()=>{const a=[],step=44;for(let i=0;i<Math.floor(CW/step);i++)a.push([i*step+10,16]);return a;})(),
+    banners:(()=>{const a=[],step=44;for(let i=0;i<Math.floor(CW/step);i++)
+      a.push([i*step+20,6,Math.round(sky*.3)]);return a;})(),
+    tiles:(()=>{const a=[],d=CH-HORIZON;for(let i=0;i<Math.round(CW*.07);i++)
+      a.push([Math.round(rnd(i*131)*CW),HORIZON+2+Math.round(rnd(i*137)*(d-3)),Math.round(6+rnd(i*139)*12)]);return a;})()
+  };
+}
+function drawArena(ts){
+  const b=curBiome(),p=b.pal;
+  b.paint(p,SD,ts||0);
+}
 const HEART=[".11.11.","1111111","1111111",".11111.","..111..","...1..."];
 function drawHearts(){
   const x0=Math.round(hero.x)+34,y0=12,s=2;
@@ -222,7 +394,7 @@ function step(actor,ts,home,dir){
 function loop(ts){
   if(!running)return;
   cx.clearRect(0,0,CW,CH);
-  drawArena();
+  drawArena(ts);
   step(foe,ts,FOE_HOME,-1);
   step(hero,ts,HERO_HOME,1);
   blit(foe,ts,true);
@@ -290,8 +462,11 @@ function loadVoices(){
   if(!window.speechSynthesis)return;
   voices=speechSynthesis.getVoices().filter(v=>/^en/i.test(v.lang));
   const sel=$('voiceSel');sel.innerHTML='';
-  if(!voices.length){sel.classList.add('hidden');return;}
-  sel.classList.remove('hidden');
+  /* Hide the whole row, not just the control: a label with nothing beside it
+     reads as a broken setting rather than an unavailable one. */
+  const row=sel.closest?sel.closest('.srow'):null;
+  if(!voices.length){(row||sel).classList.add('hidden');return;}
+  (row||sel).classList.remove('hidden');sel.classList.remove('hidden');
   voices.sort((a,b)=>(GOOD_VOICE.test(b.name)?1:0)-(GOOD_VOICE.test(a.name)?1:0));
   voices.forEach(v=>{
     const o=document.createElement('option');o.value=v.name;
@@ -542,7 +717,10 @@ function start(lesson,list,isCustom,index){
   $('viewMap').classList.add('hidden');$('viewShop').classList.add('hidden');
   $('viewPlay').classList.remove('hidden');$('backBtn').classList.remove('hidden');
   document.body.classList.add('playing');
-  $('hebBtn').classList.remove('hidden');
+  pickBiome();document.documentElement.dataset.skin=curBiome().theme;
+  const bid=curBiome().id;S.seenArena[bid]=1;
+  if(today().arenas.indexOf(bid)<0)today().arenas.push(bid);
+  if(L&&L.n==='Target practice')today().drills++;
   layoutScene();
   startLoop();newFoe();render();
 }
@@ -596,7 +774,48 @@ function render(){
   $('hint').textContent=needShift
     ? 'Hold either Shift, then press '+(NAMES[base]||base.toUpperCase())
     : 'Press '+(NAMES[base]||base.toUpperCase());
+  shownAt=performance.now();
   if(ci===0)sayTarget(w);
+}
+/* ---------- per-key mastery ----------
+   Accuracy alone says a key is learned the moment it is pressed correctly once.
+   What a typing game is actually teaching is finding the key WITHOUT hunting,
+   so time-to-press counts too, and nothing is scored until there is evidence. */
+const MASTER_MIN=3;            /* tries before a key has an opinion */
+const FAST_MS=600,SLOW_MS=2600;
+let shownAt=0;
+function noteKey(ch,good,ms){
+  if(ch===undefined||ch===null)return;
+  const k=ch.toLowerCase();
+  const r=S.keys[k]||(S.keys[k]={h:0,m:0,t:0,n:0});
+  if(good){r.h++;today().hits++;if(ms>0&&ms<15000){r.t+=ms;r.n++;}}else r.m++;
+}
+function mastery(k){
+  const r=S.keys[k];if(!r)return null;
+  const tries=r.h+r.m;if(tries<MASTER_MIN)return null;
+  const acc=r.h/tries;
+  const avg=r.n?r.t/r.n:SLOW_MS;
+  const speed=Math.max(0,Math.min(1,(SLOW_MS-avg)/(SLOW_MS-FAST_MS)));
+  return Math.max(0,Math.min(1,acc*.7+speed*.3));
+}
+const DRILLABLE=()=>[...'abcdefghijklmnopqrstuvwxyz0123456789'].filter(c=>keyEls[c]);
+/* Weakest first, then keys never tried — practising what is already fluent is
+   the one thing a drill must not do. */
+function weakKeys(n){
+  const tried=[],fresh=[];
+  DRILLABLE().forEach(c=>{const m=mastery(c);(m===null?fresh:tried).push({c,m});});
+  tried.sort((a,b)=>a.m-b.m);
+  return tried.map(x=>x.c).concat(fresh.map(x=>x.c)).slice(0,n);
+}
+function weakItems(){
+  const w=weakKeys(6);
+  if(w.length<2)return null;
+  const out=w.slice();
+  for(let i=0;i<5;i++){
+    let t='';for(let j=0;j<3;j++)t+=w[Math.floor(Math.random()*w.length)];
+    out.push(t);
+  }
+  return out;
 }
 function tap(ch){handle(ch,false);}
 function handle(ch,real){
@@ -607,6 +826,7 @@ function handle(ch,real){
   const base=needShift?(SHIFTED[want]||want.toLowerCase()):want;
   const ok=real?(ch===want||(!needShift&&ch.toLowerCase()===want.toLowerCase())):(ch===base);
   if(ok){
+    noteKey(want,true,performance.now()-shownAt);
     beep(true);coin(1);
     if(want!==' ')swing();
     ci++;
@@ -622,6 +842,7 @@ function handle(ch,real){
     }
     render();
   }else{
+    noteKey(want,false,0);
     beep(false);
     const k=keyFor(real?(SHIFTED[ch]||ch.toLowerCase()):ch);
     if(k){k.classList.add('bad');setTimeout(()=>k.classList.remove('bad'),240);}
@@ -635,7 +856,7 @@ function handle(ch,real){
 }
 function coin(n){
   const g=n*mult;
-  S.coins+=g;S.xp+=g;earned+=g;$('coinN').textContent=S.coins;save();
+  S.coins+=g;S.xp+=g;earned+=g;today().coins+=g;$('coinN').textContent=S.coins;save();
   const b=document.createElement('div');b.className='burst';b.textContent='+'+g;
   b.style.left=(window.innerWidth/2-10)+'px';b.style.top='42%';
   document.body.appendChild(b);setTimeout(()=>b.remove(),700);
@@ -650,9 +871,12 @@ function finish(){
   $('bar').style.width='100%';
   foe.alpha=0;hero.x=HERO_HOME;setAnim(hero,'idle');
   const st=misses===0?3:(misses===1?2:1);
+  today().missions++;
+  if(misses===0){today().perfect++;S.life.perfect=(S.life.perfect||0)+1;}
   $('word').innerHTML='';
   $('hint').textContent='Mission clear — '+'★'.repeat(st)+' · '+earned+' coins';
   clearKeys();speak(misses===0?'Perfect! Three stars!':'Mission clear. Well done!');
+  checkProgress();
   if(!custom&&lvl>=0){
     S.best[lvl]=Math.max(S.best[lvl]||0,earned);
     S.stars[lvl]=Math.max(S.stars[lvl]||0,st);
@@ -685,9 +909,9 @@ function toMap(){
   stopLoop();
   $('viewPlay').classList.add('hidden');$('viewShop').classList.add('hidden');
   $('viewMap').classList.remove('hidden');$('backBtn').classList.add('hidden');
-  $('hebBtn').classList.add('hidden');
   document.body.classList.remove('playing');
-  drawPicker();drawMap();drawRank();
+  sceneBiome=null;applySkin();
+  drawPicker();drawMap();drawRank();drawWeak();
 }
 function drawMap(){
   const g=$('mapGrid');g.innerHTML='';
@@ -725,18 +949,189 @@ function drawShop(){
   });
 }
 function applySkin(){
-  document.documentElement.dataset.skin=S.skin;
+  document.documentElement.dataset.skin=curBiome().theme;
   const b=$('buddy'),item=SHOP.find(s=>s.id===S.buddy);
   if(item){b.textContent=item.face;b.classList.remove('hidden');}else b.classList.add('hidden');
   document.body.classList.toggle('hide-he',!S.heb);
-  $('soundBtn').textContent=S.voice?'Voice on':'Voice off';
-  $('sfxBtn').textContent=S.sfx?'Sound on':'Sound off';
-  $('hebBtn').textContent=S.heb?'א Hebrew keys on':'א Hebrew keys off';
+  $('soundBtn').textContent=S.voice?'On':'Off';
+  $('sfxBtn').textContent=S.sfx?'On':'Off';
+  $('hebBtn').textContent=S.heb?'On':'Off';
+  $('soundBtn').classList.toggle('off',!S.voice);
+  $('sfxBtn').classList.toggle('off',!S.sfx);
+  $('hebBtn').classList.toggle('off',!S.heb);
   $('coinN').textContent=S.coins;
 }
 $('soundBtn').onclick=()=>{S.voice=S.voice?0:1;save();applySkin();};
 $('sfxBtn').onclick=()=>{S.sfx=S.sfx?0:1;save();applySkin();if(S.sfx)sfx('swing');};
 $('hebBtn').onclick=()=>{S.heb=S.heb?0:1;save();applySkin();};
+/* One panel for every setting: the header had grown six controls and was about
+   to grow more. Registered once at startup, both openers and both closers. */
+function drawArenaSel(){
+  const sel=$('arenaSel');if(!sel)return;
+  sel.innerHTML='';
+  const add=(v,t)=>{const o=document.createElement('option');o.value=v;o.textContent=t;sel.appendChild(o);};
+  add('auto','Follow the mission');
+  BIOMES.forEach(b=>{
+    const locked=SHOP.some(x=>x.id===b.id)&&!S.owned.includes(b.id);
+    if(!locked)add(b.id,b.name);
+  });
+  sel.value=BIOMES.some(b=>b.id===S.arena)?S.arena:'auto';
+}
+/* ---------- day, dailies, achievements ----------
+   Local and additive: delete this block and the game still plays. Every
+   achievement is a pure function of the lifetime counters, so it can be
+   re-evaluated at any time and can never double-award. */
+/* Local midnight, not UTC: a child playing at 21:00 and again at 08:00 has
+   played on two days, whatever the timezone offset says. */
+function dayNum(){
+  const d=new Date();
+  return Math.floor(new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime()/86400000);
+}
+function touchStreak(){
+  const n=dayNum();
+  if(S.dayN===n)return;
+  S.streak=(S.dayN===n-1)?(S.streak||0)+1:1;
+  S.dayN=n;
+  if(S.streak>(S.bestStreak||0))S.bestStreak=S.streak;
+  save();
+}
+function today(){
+  const n=dayNum();
+  if(!S.today||S.today.n!==n)S.today={n:n,missions:0,hits:0,perfect:0,drills:0,coins:0,arenas:[],done:{}};
+  return S.today;
+}
+const DAILIES=[
+ {id:'m2',   t:'Clear two missions',            goal:2,  coins:40,get:t=>t.missions},
+ {id:'k120', t:'Hit 120 keys',                  goal:120,coins:40,get:t=>t.hits},
+ {id:'perf', t:'Finish a mission with no misses',goal:1,  coins:60,get:t=>t.perfect},
+ {id:'drill',t:'Run a target-practice drill',   goal:1,  coins:40,get:t=>t.drills},
+ {id:'c60',  t:'Earn 60 coins',                 goal:60, coins:30,get:t=>t.coins},
+ {id:'ar3',  t:'Fight in three arenas',         goal:3,  coins:50,get:t=>t.arenas.length}
+];
+/* Chosen by the date, so they are the same all day and roll over at midnight. */
+function todayMissions(){
+  const pool=DAILIES.slice(),pick=[];let h=(dayNum()*2654435761)>>>0;
+  for(let i=0;i<3&&pool.length;i++){h=(h*1103515245+12345)>>>0;pick.push(pool.splice(h%pool.length,1)[0]);}
+  return pick;
+}
+function summary(){
+  let hits=0,miss=0,t=0,n=0,mastered=0;
+  DRILLABLE().forEach(c=>{
+    const r=S.keys[c];if(!r)return;
+    hits+=r.h;miss+=r.m;t+=r.t;n+=r.n;
+    const q=mastery(c);if(q!==null&&q>=.8)mastered++;
+  });
+  return {hits,miss,mastered,
+    acc:hits+miss?Math.round(hits/(hits+miss)*100):0,
+    avg:n?t/n:0,
+    cleared:LESSONS.filter((_,i)=>S.stars[i]).length,
+    stars:LESSONS.reduce((a,_,i)=>a+(S.stars[i]||0),0)};
+}
+const ACH=[
+ {id:'first', t:'First mission cleared',      ok:d=>d.cleared>=1},
+ {id:'perf',  t:'A mission with no misses',   ok:d=>(S.life.perfect||0)>=1},
+ {id:'home',  t:'Home row mastered',          ok:d=>[...'asdfjkl'].every(c=>(mastery(c)||0)>=.8)},
+ {id:'k1000', t:'1,000 keys hit',             ok:d=>d.hits>=1000},
+ {id:'m20',   t:'20 keys mastered',           ok:d=>d.mastered>=20},
+ {id:'acc95', t:'95% accuracy over 300 keys', ok:d=>d.hits>=300&&d.acc>=95},
+ {id:'allm',  t:'Every mission cleared',      ok:d=>d.cleared>=LESSONS.length},
+ {id:'stars', t:'Every star collected',       ok:d=>d.stars>=LESSONS.length*3},
+ {id:'s3',    t:'Three days in a row',        ok:d=>(S.bestStreak||0)>=3},
+ {id:'s7',    t:'Seven days in a row',        ok:d=>(S.bestStreak||0)>=7},
+ {id:'tour',  t:'Fought in every arena',      ok:d=>Object.keys(S.seenArena||{}).length>=BIOMES.length}
+];
+function checkProgress(){
+  const t=today(),d=summary();
+  todayMissions().forEach(m=>{
+    if(t.done[m.id])return;
+    if(m.get(t)>=m.goal){
+      t.done[m.id]=1;S.coins+=m.coins;$('coinN').textContent=S.coins;
+      toast('DAILY DONE — '+m.t+'  +'+m.coins,6000);
+    }
+  });
+  ACH.forEach(a=>{
+    if(S.ach[a.id])return;
+    if(a.ok(d)){S.ach[a.id]=1;toast('ACHIEVEMENT — '+a.t,6000);}
+  });
+  save();
+}
+
+/* ---------- progress ---------- */
+function toast(msg,ms){
+  const t=document.createElement('div');t.className='toast';t.textContent=msg;
+  document.body.appendChild(t);setTimeout(()=>t.remove(),ms||3200);
+}
+function fig(v,label){return '<div class="fig"><b>'+v+'</b><small>'+label+'</small></div>';}
+function heatClass(m){return m===null?'':(m<.4?'m1':m<.6?'m2':m<.8?'m3':'m4');}
+function drawStats(){
+  /* One place computes the figures; the sheet and the achievements both read it. */
+  const d=summary();
+  $('statFigs').innerHTML=
+    fig(d.hits.toLocaleString(),'keys hit')+fig(d.acc+'%','accuracy')+
+    fig(d.avg?(d.avg/1000).toFixed(2)+'s':'—','average to find a key')+
+    fig(d.mastered+'/'+DRILLABLE().length,'keys mastered')+
+    fig(d.cleared+'/'+LESSONS.length,'missions cleared')+
+    fig(d.stars+'/'+LESSONS.length*3,'stars');
+  const t=today();
+  $('statDay').innerHTML=
+    '<div class="streak"><b>'+(S.streak||0)+'</b> day'+((S.streak||0)===1?'':'s')+' in a row'+
+    ((S.bestStreak||0)>(S.streak||0)?' <small>best '+S.bestStreak+'</small>':'')+'</div>'+
+    todayMissions().map(m=>{
+      const at=Math.min(m.get(t),m.goal),done=!!t.done[m.id];
+      return '<div class="daily'+(done?' done':'')+'"><span>'+m.t+'</span>'+
+        '<i><b style="width:'+Math.round(at/m.goal*100)+'%"></b></i>'+
+        '<small>'+(done?'done · +'+m.coins:at+'/'+m.goal)+'</small></div>';
+    }).join('');
+  $('statAch').innerHTML=ACH.map(a=>
+    '<div class="ach'+(S.ach[a.id]?' got':'')+'">'+(S.ach[a.id]?'★':'☆')+' '+a.t+'</div>').join('');
+  const g=$('heat');g.innerHTML='';
+  ROWS.forEach(r=>{
+    const row=document.createElement('div');row.className='heatrow';
+    r.forEach(([base])=>{
+      if(base.length!==1||base===' ')return;
+      const d=document.createElement('div');
+      const q=mastery(base);
+      d.className='hk '+heatClass(q);
+      d.textContent=base.toUpperCase();
+      const r2=S.keys[base];
+      d.title=r2?(base.toUpperCase()+': '+r2.h+' right, '+r2.m+' wrong'+
+        (q===null?' — needs '+(MASTER_MIN-(r2.h+r2.m))+' more':' — '+Math.round(q*100)+'%'))
+        :(base.toUpperCase()+': not tried yet');
+      row.appendChild(d);
+    });
+    if(row.children.length)g.appendChild(row);
+  });
+}
+function drawWeak(){
+  const w=weakKeys(6);
+  $('weakList').textContent=w.length?w.join(' '):'play a mission first';
+  $('weakGo').disabled=w.length<2;
+}
+/* Re-evaluated on open, not only at mission end: the achievements are pure
+   functions of the counters, so asking again is free and never double-awards,
+   and the sheet can never show a state the player has already passed. */
+function openStats(){checkProgress();drawStats();$('statSheet').classList.remove('hidden');}
+function closeStats(){$('statSheet').classList.add('hidden');}
+$('statBtn').onclick=openStats;
+$('statClose').onclick=closeStats;
+$('statSheet').addEventListener('click',e=>{if(e.target===$('statSheet'))closeStats();});
+$('weakGo').onclick=()=>{
+  const it=weakItems();
+  if(!it){toast('Play a mission first, then this fills up.');return;}
+  start({n:'Target practice',s:'your weak keys'},it,true);
+};
+function openSet(){drawArenaSel();applySkin();$('setSheet').classList.remove('hidden');}
+function closeSet(){$('setSheet').classList.add('hidden');}
+$('setBtn').onclick=openSet;
+$('setClose').onclick=closeSet;
+$('setSheet').addEventListener('click',e=>{if(e.target===$('setSheet'))closeSet();});
+$('arenaSel').onchange=e=>{
+  S.arena=e.target.value;save();
+  if(!$('viewPlay').classList.contains('hidden')){pickBiome();document.documentElement.dataset.skin=curBiome().theme;layoutScene();}
+};
+document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
+  if(!$('setSheet').classList.contains('hidden'))closeSet();
+  if(!$('statSheet').classList.contains('hidden'))closeStats();});
 $('voiceSel').onchange=e=>{S.voiceName=e.target.value;S.voicePick=1;save();speak('Hello, ready to play?');};
 $('backBtn').onclick=toMap;
 $('coinBtn').onclick=()=>{
@@ -744,8 +1139,7 @@ $('coinBtn').onclick=()=>{
     stopLoop();
     $('viewMap').classList.add('hidden');$('viewPlay').classList.add('hidden');
     $('viewShop').classList.remove('hidden');$('backBtn').classList.remove('hidden');
-    $('hebBtn').classList.add('hidden');
-    document.body.classList.remove('playing');drawShop();
+      document.body.classList.remove('playing');drawShop();
   }else toMap();
 };
 $('sayBtn').onclick=()=>sayTarget(items[ix]||'');
@@ -756,4 +1150,11 @@ $('customGo').onclick=()=>{
 };
 $('customIn').addEventListener('keydown',e=>{if(e.key==='Enter')$('customGo').click();});
 
-applySkin();drawPicker();drawMap();drawRank();loadClips();
+applySkin();drawPicker();drawMap();drawRank();drawWeak();loadClips();
+/* The version is on screen and a change announces itself: during a screenshot
+   loop the two questions that cost the most are "which version is that?" and
+   "is the deploy stuck, or is it my cache?" */
+touchStreak();checkProgress();
+$('verTag').textContent='v'+APP_VERSION;
+if(S.ver&&S.ver!==APP_VERSION)toast('Updated to v'+APP_VERSION);
+if(S.ver!==APP_VERSION){S.ver=APP_VERSION;save();}
