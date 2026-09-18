@@ -193,6 +193,11 @@ body.playing .progress{margin-top:8px}
 body.playing .kb,body.playing .row{flex:0 0 auto}
 body.playing .row{margin-top:0;justify-content:center}
 
+.wnver{color:var(--ink-soft);font-size:11.5px;margin:-8px 0 12px;letter-spacing:.1em;text-transform:uppercase}
+.wn{padding:9px 0;border-bottom:1px solid var(--edge)}
+.wn b{display:block;font-size:14px;margin-bottom:2px}
+.wn small{color:var(--ink-soft);font-size:12.5px;line-height:1.5}
+
 /* voice sheet */
 .sheetBox.wide-sheet{max-width:600px}
 .lede.sm{font-size:12.5px;margin-bottom:12px}

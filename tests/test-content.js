@@ -11,7 +11,7 @@ const {install}=require('./dom-stub.js');
 
 const SRC=path.join(__dirname,'..','src','app.js');
 const code=fs.readFileSync(SRC,'utf8')+
-  '\n;globalThis.__T={LESSONS,keyEls,NAMES,VTOKENS,SHOP,BIOMES,DAILIES,ACH,VGROUPS,vGroupOf,FIGHTERS,BESTIARY,BASE,DEF,LW,RANKS,SHIFTED,ROWS,HE,Z};';
+  '\n;globalThis.__T={LESSONS,keyEls,NAMES,VTOKENS,SHOP,BIOMES,DAILIES,ACH,VGROUPS,vGroupOf,WHATS_NEW,APP_VERSION,minorOf,FIGHTERS,BESTIARY,BASE,DEF,LW,RANKS,SHIFTED,ROWS,HE,Z};';
 
 const sandbox=install();
 vm.createContext(sandbox);
@@ -118,6 +118,21 @@ ok('no two shop items share an id',
    new Set(T.SHOP.map(s=>s.id)).size===T.SHOP.length);
 ok('every lesson has at least one item',T.LESSONS.every(L=>L.items.length>0));
 ok('every lesson has a name and a subtitle',T.LESSONS.every(L=>L.n&&L.s));
+
+console.log('release');
+/* Release notes go stale silently: they sat on one version for fifty releases
+   in the sibling project, still announcing things that were long since old.
+   Memory does not fix that; a gate does. */
+ok('the release notes describe this release',
+   T.minorOf(T.WHATS_NEW.for)===T.minorOf(T.APP_VERSION),
+   'notes are for '+T.WHATS_NEW.for+' but this is '+T.APP_VERSION+
+   ' — rewrite WHATS_NEW.items and set .for before shipping a feature release');
+ok('the notes are not empty',T.WHATS_NEW.items.length>0);
+ok('every note has a heading and a description',
+   T.WHATS_NEW.items.every(i=>Array.isArray(i)&&i.length===2&&i[0]&&i[1]));
+/* A suffix would break the comparison above and show the banner forever. */
+ok('the version is plain numbers',/^\d+\.\d+\.\d+$/.test(T.APP_VERSION),
+   'APP_VERSION is '+T.APP_VERSION);
 
 console.log('dailies and achievements');
 ok('every daily is complete and rewarding',

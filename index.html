@@ -53,7 +53,7 @@
       <input type="text" id="customIn" placeholder="dog" autocomplete="off" spellcheck="false">
       <button class="pill" id="customGo">Light it up</button>
     </div>
-    <p class="credit"><span id="verTag"></span> · Character sprites: Tiny RPG Character Asset Pack (Free Soldier &amp; Orc). Extra fighters and enemies are recolours of those two sprites.</p>
+    <p class="credit"><span id="verTag"></span> · © 2026 Benny Ankri · Character sprites: Tiny RPG Character Asset Pack (Free Soldier &amp; Orc). Extra fighters and enemies are recolours of those two sprites.</p>
   </section>
 
   <section id="viewPlay" class="hidden">
@@ -75,6 +75,14 @@
     <p class="lede">Spend coins on a companion or a new arena colour.</p>
     <div class="shop" id="shopGrid"></div>
   </section>
+</div>
+<div class="sheet hidden" id="wnSheet">
+  <div class="sheetBox" role="dialog" aria-modal="true" aria-labelledby="wnTitle">
+    <h3 id="wnTitle">What's new</h3>
+    <p class="wnver" id="wnVer"></p>
+    <div id="wnList"></div>
+    <button class="pill wide" id="wnClose">Let's play</button>
+  </div>
 </div>
 <div class="sheet hidden" id="vpSheet">
   <div class="sheetBox wide-sheet" role="dialog" aria-modal="true" aria-labelledby="vpTitle">
@@ -119,6 +127,8 @@
       <select class="pill" id="arenaSel"></select></div>
     <div class="srow"><span>Your own voice<small id="vpCount">record yourself saying each key</small></span>
       <button class="pill" id="vpOpen">Record</button></div>
+    <div class="srow"><span>What's new<small id="wnRow">the latest changes</small></span>
+      <button class="pill" id="wnOpen">Read</button></div>
     <button class="pill wide" id="setClose">Done</button>
   </div>
 </div>
