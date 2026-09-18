@@ -36,7 +36,10 @@
   </div>
 
   <section id="viewMap">
-    <button class="playNow" id="playNow"><b id="playNowT">Play</b><small id="playNowS"></small></button>
+    <div class="playBar">
+      <button class="playNow" id="playNow"><b id="playNowT">Play</b><small id="playNowS"></small></button>
+      <button class="heroChip" id="heroChip" aria-label="Change fighter"></button>
+    </div>
 
     <h2>Missions</h2>
     <p class="lede" id="rulesLede">Find the glowing key on screen, press it on the real keyboard. Right key, you strike. Wrong key, the enemy strikes back — lose all your hearts and the mission ends. Clear a mission without a single mistake for three stars.</p>
@@ -46,8 +49,6 @@
     <p class="lede">The keys you miss most, and the ones you have never tried. This list is built from how you actually played, so it changes as you improve.</p>
     <div class="row"><button class="pill" id="weakGo">Drill my weak keys</button><span class="weaklist" id="weakList"></span></div>
 
-    <h2>Your fighter</h2>
-    <div class="picker" id="picker"></div>
 
     <h2>Free practice</h2>
     <p class="lede">Type any word — a name, a password — and the keys will light up for it.</p>
