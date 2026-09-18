@@ -62,14 +62,14 @@ const LESSONS=[
  {n:'Low row',s:'z x c v b n m',items:['c','v','b','n','m','z','x','van','cab','mix']},
  {n:'Missing pieces',s:'q w p y g h',items:['happy','queen','group','why','yoga','giant','puppy']},
  {n:'Space bar',s:'two words',items:['big dog','my cat','we can go','red bus','a good day']},
- {n:'Capitals',s:'hold Shift',items:['Andy','Dad','Leni','Sunday','Israel','Ramat Gan']},
+ {n:'Capitals',s:'hold Shift',items:['Apple','Dad','Leni','Sunday','Israel','Ramat Gan']},
  {n:'Number row',s:'1 to 0',items:['1','4','7','0','2026','365','19','800']},
  {n:'Long words',s:'whole alphabet',items:['keyboard','computer','elephant','birthday','dinosaur','football']},
  {n:'Symbols',s:'Shift + numbers',items:['!','?','@','#','$','%','&','*']},
- {n:'Sentences',s:'space + capitals',items:['I can type','My name is Andy','We go home','Dad is here']},
+ {n:'Sentences',s:'space + capitals',items:['I can type','I like to play','We go home','Dad is here']},
  {n:'Speed drill',s:'short and fast',items:['cat','dog','run','sun','fun','top','red','big','new','old']},
  {n:'Mixed bag',s:'letters and numbers',items:['level7','room12','bus99','key2026','game4']},
- {n:'Password power',s:'the real thing',items:['Dog123','Andy!7','Sky_99','Tiger#4','Blue2026!']}
+ {n:'Password power',s:'the real thing',items:['Dog123','Star!7','Sky_99','Tiger#4','Blue2026!']}
 ];
 
 /* ---------- state ---------- */
@@ -450,6 +450,7 @@ function start(lesson,list,isCustom,index){
   hero.base=f.base;hero.tint=f.tint;hero.alpha=1;
   $('viewMap').classList.add('hidden');$('viewShop').classList.add('hidden');
   $('viewPlay').classList.remove('hidden');$('backBtn').classList.remove('hidden');
+  document.body.classList.add('playing');
   startLoop();newFoe();render();
 }
 function newFoe(){
@@ -591,6 +592,7 @@ function toMap(){
   stopLoop();
   $('viewPlay').classList.add('hidden');$('viewShop').classList.add('hidden');
   $('viewMap').classList.remove('hidden');$('backBtn').classList.add('hidden');
+  document.body.classList.remove('playing');
   drawPicker();drawMap();drawRank();
 }
 function drawMap(){
@@ -641,13 +643,14 @@ function applySkin(){
 $('soundBtn').onclick=()=>{S.voice=S.voice?0:1;save();applySkin();};
 $('sfxBtn').onclick=()=>{S.sfx=S.sfx?0:1;save();applySkin();if(S.sfx)sfx('swing');};
 $('hebBtn').onclick=()=>{S.heb=S.heb?0:1;save();applySkin();};
-$('voiceSel').onchange=e=>{S.voiceName=e.target.value;save();speak('Hello Andy, ready to play?');};
+$('voiceSel').onchange=e=>{S.voiceName=e.target.value;save();speak('Hello, ready to play?');};
 $('backBtn').onclick=toMap;
 $('coinBtn').onclick=()=>{
   if($('viewShop').classList.contains('hidden')){
     stopLoop();
     $('viewMap').classList.add('hidden');$('viewPlay').classList.add('hidden');
-    $('viewShop').classList.remove('hidden');$('backBtn').classList.remove('hidden');drawShop();
+    $('viewShop').classList.remove('hidden');$('backBtn').classList.remove('hidden');
+    document.body.classList.remove('playing');drawShop();
   }else toMap();
 };
 $('sayBtn').onclick=()=>sayTarget(items[ix]||'');

@@ -4,7 +4,7 @@ A keyboard-learning game for kids. A word appears, the matching key glows on an
 on-screen keyboard that carries both English and Hebrew legends, and pressing the
 right key makes your fighter strike. Press the wrong one and the enemy strikes back.
 
-Built with Andy (age 7), whose idea this was.
+Built with my seven-year-old, whose idea this was.
 
 ## What's in it
 
