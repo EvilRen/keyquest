@@ -1,4 +1,4 @@
-const APP_VERSION='2.5.3';
+const APP_VERSION='2.5.4';
 /* The notes record which release they were written for, and a test fails a
    feature release that ships without rewriting them. Memory does not keep
    release notes current; a gate does. */
@@ -1129,7 +1129,7 @@ function render(){
   const pair=w.length===1&&/^[a-z]$/.test(w);
   [...w].forEach((c,i)=>{
     const s=document.createElement('i');
-    if(pair)s.innerHTML=c.toUpperCase()+'<em>'+c+'</em>';
+    if(pair)s.innerHTML=c.toUpperCase()+'<em>/</em>'+c;
     else s.textContent=c===' '?'␣':c;
     if(c===' ')s.classList.add('space');
     if(i<ci)s.classList.add('done');
