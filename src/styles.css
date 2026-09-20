@@ -141,6 +141,9 @@ p.lede{color:var(--ink-soft);margin:0 0 14px;font-size:13.5px;max-width:62ch;lin
 .word{font-size:clamp(24px,min(8.5vw,7.5dvh),50px);font-weight:900;letter-spacing:.1em;line-height:1.2;margin-top:10px;
   display:flex;justify-content:center;flex-wrap:wrap;gap:.03em;min-height:1.3em}
 .word i{font-style:normal;opacity:.28;transition:opacity .12s}
+/* the lowercase the key actually types, beside the capital printed on it */
+.word i em{font-style:normal;font-size:.52em;opacity:.6;margin-left:.1em;vertical-align:.34em;
+  letter-spacing:0}
 .word i.done{opacity:.5;color:var(--acc)}
 .word i.now{opacity:1;position:relative;color:var(--ink)}
 .word i.now::after{content:"";position:absolute;left:6%;right:6%;bottom:-6px;height:4px;background:var(--acc)}
