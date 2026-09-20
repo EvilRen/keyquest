@@ -1,4 +1,4 @@
-const APP_VERSION='2.5.2';
+const APP_VERSION='2.5.3';
 /* The notes record which release they were written for, and a test fails a
    feature release that ships without rewriting them. Memory does not keep
    release notes current; a gate does. */
@@ -1122,9 +1122,15 @@ function killFoe(cb){
 function render(){
   const w=items[ix]||'';
   const box=$('word');box.innerHTML='';
+  /* A single letter is shown in both cases: the keycap the child is hunting for
+     is marked F, and pressing it types f. Showing only one of the two left the
+     big letter, the keycap and the line underneath disagreeing about the same
+     key. Words are shown exactly as they must be typed. */
+  const pair=w.length===1&&/^[a-z]$/.test(w);
   [...w].forEach((c,i)=>{
     const s=document.createElement('i');
-    s.textContent=c===' '?'␣':c;
+    if(pair)s.innerHTML=c.toUpperCase()+'<em>'+c+'</em>';
+    else s.textContent=c===' '?'␣':c;
     if(c===' ')s.classList.add('space');
     if(i<ci)s.classList.add('done');
     if(i===ci)s.classList.add('now');
