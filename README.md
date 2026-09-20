@@ -35,6 +35,11 @@ Built with my seven-year-old, whose idea this was.
   frost peaks, orbit deck, ashfall, keep hall, sunken reef, sky temple,
   scrapyard, neon dojo, hollow wood, circuit board and two more. A mission walks
   to the next one; fireflies, snow, embers, bubbles and wisps move
+- **Hints that fade** — the on-screen keyboard lights the target key only while
+  the key is still being learned; once it is mastered nothing lights up and the
+  child has to find it. A miss or a few seconds of hesitation brings the hint
+  straight back, and on a touch screen it always shows, because there the
+  on-screen keyboard is the input
 - **Per-key mastery** — every press is scored on accuracy *and* time to find the
   key. Target practice builds a drill from the weakest keys and the ones never
   tried, and the Progress sheet shows a keyboard heat map
