@@ -1,4 +1,4 @@
-const APP_VERSION='2.5.1';
+const APP_VERSION='2.5.2';
 /* The notes record which release they were written for, and a test fails a
    feature release that ships without rewriting them. Memory does not keep
    release notes current; a gate does. */
@@ -1052,7 +1052,8 @@ ROWS.forEach(r=>{
     if(base===' ')b.dataset.zone=0;
     const label=base===' '?'':(base==='Backspace'?'⟵<br>Backspace':base);
     if(isChar&&base!==' '){
-      b.innerHTML='<span class="en">'+(/[a-z]/.test(base)?base.toUpperCase():(up?up+' '+base:base))+'</span>'+
+      b.innerHTML='<span class="en'+(up?' two':'')+'">'+
+        (/[a-z]/.test(base)?base.toUpperCase():(up?up+' '+base:base))+'</span>'+
         (HE[base]?'<span class="he">'+HE[base]+'</span>':'');
     }else{b.innerHTML='<span class="fn'+(base==='Backspace'?' small':'')+'">'+label+'</span>';}
     b.dataset.k=base;if(side)b.dataset.side=side;
