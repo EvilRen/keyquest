@@ -161,8 +161,13 @@ p.lede{color:var(--ink-soft);margin:0 0 14px;font-size:13.5px;max-width:62ch;lin
 /* Now that a learned key is no longer lit, the child reads the keycap to find
    it — so the legend has a floor. Proportional alone put it at 7.8px on a
    phone, which is not a letter anyone hunts for. */
-.key .en{font-weight:700;font-size:max(10.5px,calc(var(--kh)*.30))}
-.key .he{position:absolute;bottom:calc(var(--kh)*.05);right:calc(var(--kh)*.09);font-size:max(8px,calc(var(--kh)*.22));
+/* On a real keyboard the letter is the loudest thing on the cap, and now that
+   a learned key no longer lights up, the child reads these to find it. */
+.key .en{font-weight:800;font-size:max(13px,calc(var(--kh)*.42));line-height:1}
+/* The number row carries two characters, so it gets its own size or it spills
+   off a phone-sized key. */
+.key .en.two{font-size:max(10px,calc(var(--kh)*.30));letter-spacing:-.02em}
+.key .he{position:absolute;bottom:calc(var(--kh)*.04);right:calc(var(--kh)*.08);font-size:max(9px,calc(var(--kh)*.26));
   font-weight:500;color:var(--ink-soft)}
 .key .fn{font-size:calc(var(--kh)*.21);font-weight:700;color:var(--ink-soft);line-height:1.15;text-align:center;
   white-space:nowrap;overflow:hidden;padding:0 2px}
