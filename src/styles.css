@@ -173,6 +173,8 @@ p.lede{color:var(--ink-soft);margin:0 0 14px;font-size:13.5px;max-width:62ch;lin
 .key[data-zone="5"]::before{background:var(--z5)}
 .key.live{background:var(--acc);color:#04201E;border-color:var(--acc);box-shadow:0 0 14px var(--acc)}
 .key.live .he,.key.live .fn{color:#04201E}
+/* The quiet middle step: enough to confirm a guess, not enough to read off. */
+.key.warm{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc-soft)}
 .key.assist{background:var(--panel2);border-color:var(--acc2);color:var(--acc2);
   box-shadow:inset 0 0 0 2px var(--acc2),0 0 14px var(--acc2);animation:hold 1.1s ease-in-out infinite}
 .key.assist .fn,.key.assist .he,.key.assist .en{color:var(--acc2)}

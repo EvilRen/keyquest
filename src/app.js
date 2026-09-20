@@ -1,8 +1,9 @@
-const APP_VERSION='2.4.0';
+const APP_VERSION='2.5.0';
 /* The notes record which release they were written for, and a test fails a
    feature release that ships without rewriting them. Memory does not keep
    release notes current; a gate does. */
-const WHATS_NEW={for:'2.4.0',items:[
+const WHATS_NEW={for:'2.5.0',items:[
+ ['The keyboard stops giving it away','A key you have learned no longer lights up — you have to find it yourself, which is the point. A key you are still learning gets a quiet outline, and a new one still lights up fully. Get stuck for a moment or press the wrong key and the hint comes straight back.'],
  ['Fourteen more missions','Thirty now. Double letters, one hand at a time, full stops and brackets, the tricky twins b d p q, place names, long sentences, an email and web round, strong passwords, and a final exam.'],
  ['Six more places','A sunken reef, a sky temple, a scrapyard, a neon dojo, a hollow wood and the inside of a circuit board — sixteen arenas in all.'],
  ['Ten more enemies and eleven more medals','Twenty foes to meet for the bestiary, twenty-two achievements, and two new ranks above Legend.'],
@@ -1061,7 +1062,7 @@ ROWS.forEach(r=>{
   kb.appendChild(row);
 });
 function keyFor(ch){return ch==='Shift'?keyEls['ShiftLeft']:(keyEls[ch]||null);}
-function clearKeys(){document.querySelectorAll('.key').forEach(k=>k.classList.remove('live','assist','bad'));}
+function clearKeys(){document.querySelectorAll('.key').forEach(k=>k.classList.remove('live','warm','assist','bad'));}
 
 /* ---------- play ---------- */
 let L=null,lvl=-1,items=[],ix=0,ci=0,earned=0,custom=false,hp=0,hpMax=0,busy=false,guard=0,misses=0,mult=1;
@@ -1134,7 +1135,13 @@ function render(){
   if(ch===undefined)return;
   const needShift=/[A-Z]/.test(ch)||!!SHIFTED[ch];
   const base=needShift?(SHIFTED[ch]||ch.toLowerCase()):ch;
-  const k=keyFor(base);if(k)k.classList.add('live');
+  const tgt=ix+':'+ci;
+  if(tgt!==lastTarget){lastTarget=tgt;revealed=false;}
+  const k=keyFor(base),lv=hintLevel(base);
+  if(k&&lv===2)k.classList.add('live');
+  else if(k&&lv===1)k.classList.add('warm');
+  clearTimeout(hintTimer);
+  if(lv<2)hintTimer=setTimeout(()=>{if(ix+':'+ci===tgt&&!busy)revealNow(base);},HINT_WAIT);
   if(needShift){keyEls['ShiftLeft'].classList.add('assist');keyEls['ShiftRight'].classList.add('assist');}
   $('hint').textContent=needShift
     ? 'Hold either Shift, then press '+(NAMES[base]||base.toUpperCase())
@@ -1182,7 +1189,36 @@ function weakItems(){
   }
   return out;
 }
-function tap(ch){handle(ch,false);}
+/* ---------- how much to give away ----------
+   Lighting the target key on the on-screen keyboard tells the child WHERE it
+   is. The word and "Press F" already tell them WHAT it is — two different
+   things, and the game used to hand over both, every time, forever. A child
+   who already knows a key learns nothing from being shown it again; they stop
+   reading the keyboard and start matching a lit square.
+
+   So the hint fades as the key is learned, and comes back the moment it is
+   needed: on a wrong key, or after a few seconds of hesitation. On a touch
+   screen the on-screen keyboard IS the input, so there it always shows. */
+const HINT_WAIT=2600;
+let revealed=false,hintTimer=0,usedScreenKb=false,lastTarget='';
+function alwaysHint(){
+  if(usedScreenKb)return true;
+  try{return matchMedia('(pointer: coarse)').matches&&!matchMedia('(pointer: fine)').matches;}
+  catch(e){return false;}
+}
+function hintLevel(k){
+  if(alwaysHint()||revealed)return 2;
+  const m=mastery(k);
+  if(m===null||m<.5)return 2;      /* new or shaky — show it */
+  if(m<.8)return 1;                /* getting there — a quiet outline */
+  return 0;                        /* known — find it yourself */
+}
+function revealNow(base){
+  revealed=true;
+  const k=keyFor(base);
+  if(k){k.classList.remove('warm');k.classList.add('live');}
+}
+function tap(ch){usedScreenKb=true;handle(ch,false);}
 function handle(ch,real){
   if(busy)return;
   const w=items[ix];if(!w)return;
@@ -1212,6 +1248,7 @@ function handle(ch,real){
     render();
   }else{
     sayKey(ch);
+    revealNow(base);          /* a miss means the hint is needed now */
     beep(false);
     const k=keyFor(real?(SHIFTED[ch]||ch.toLowerCase()):ch);
     if(k){k.classList.add('bad');setTimeout(()=>k.classList.remove('bad'),240);}
@@ -1283,6 +1320,7 @@ function toMap(){
   $('viewPlay').classList.add('hidden');$('viewShop').classList.add('hidden');
   $('viewMap').classList.remove('hidden');$('backBtn').classList.add('hidden');
   document.body.classList.remove('playing');
+  clearTimeout(hintTimer);lastTarget='';
   sceneBiome=null;$('foeName').textContent='';applySkin();
   drawPicker();drawMap();drawRank();drawWeak();drawPlayNow();
 }
