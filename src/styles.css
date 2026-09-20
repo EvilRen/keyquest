@@ -158,8 +158,11 @@ p.lede{color:var(--ink-soft);margin:0 0 14px;font-size:13.5px;max-width:62ch;lin
   border:1px solid var(--cap-edge);border-bottom:3px solid var(--cap-edge);display:flex;align-items:center;
   justify-content:center;font-family:inherit;color:var(--ink);cursor:pointer;padding:0;
   transition:transform .06s,box-shadow .12s,background .12s,border-color .12s}
-.key .en{font-weight:700;font-size:calc(var(--kh)*.30)}
-.key .he{position:absolute;bottom:calc(var(--kh)*.05);right:calc(var(--kh)*.09);font-size:calc(var(--kh)*.22);
+/* Now that a learned key is no longer lit, the child reads the keycap to find
+   it — so the legend has a floor. Proportional alone put it at 7.8px on a
+   phone, which is not a letter anyone hunts for. */
+.key .en{font-weight:700;font-size:max(10.5px,calc(var(--kh)*.30))}
+.key .he{position:absolute;bottom:calc(var(--kh)*.05);right:calc(var(--kh)*.09);font-size:max(8px,calc(var(--kh)*.22));
   font-weight:500;color:var(--ink-soft)}
 .key .fn{font-size:calc(var(--kh)*.21);font-weight:700;color:var(--ink-soft);line-height:1.15;text-align:center;
   white-space:nowrap;overflow:hidden;padding:0 2px}

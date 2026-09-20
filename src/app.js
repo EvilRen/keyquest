@@ -1,4 +1,4 @@
-const APP_VERSION='2.5.0';
+const APP_VERSION='2.5.1';
 /* The notes record which release they were written for, and a test fails a
    feature release that ships without rewriting them. Memory does not keep
    release notes current; a gate does. */
@@ -1197,17 +1197,18 @@ function weakItems(){
    reading the keyboard and start matching a lit square.
 
    So the hint fades as the key is learned, and comes back the moment it is
-   needed: on a wrong key, or after a few seconds of hesitation. On a touch
-   screen the on-screen keyboard IS the input, so there it always shows. */
+   needed: on a wrong key, or after a few seconds of hesitation.
+
+   This used to make an exception for touch screens, on the reasoning that
+   there the on-screen keyboard IS the input rather than a map of a real one.
+   That was wrong: every key on it carries its letter, so a child can read it
+   and hunt for the key exactly as they would on a physical keyboard. The
+   highlight was never needed to tap — it was always a hint, and it saves the
+   same search on a phone that it saves on a desktop. No exception. */
 const HINT_WAIT=2600;
-let revealed=false,hintTimer=0,usedScreenKb=false,lastTarget='';
-function alwaysHint(){
-  if(usedScreenKb)return true;
-  try{return matchMedia('(pointer: coarse)').matches&&!matchMedia('(pointer: fine)').matches;}
-  catch(e){return false;}
-}
+let revealed=false,hintTimer=0,lastTarget='';
 function hintLevel(k){
-  if(alwaysHint()||revealed)return 2;
+  if(revealed)return 2;
   const m=mastery(k);
   if(m===null||m<.5)return 2;      /* new or shaky — show it */
   if(m<.8)return 1;                /* getting there — a quiet outline */
@@ -1218,7 +1219,7 @@ function revealNow(base){
   const k=keyFor(base);
   if(k){k.classList.remove('warm');k.classList.add('live');}
 }
-function tap(ch){usedScreenKb=true;handle(ch,false);}
+function tap(ch){handle(ch,false);}
 function handle(ch,real){
   if(busy)return;
   const w=items[ix];if(!w)return;
